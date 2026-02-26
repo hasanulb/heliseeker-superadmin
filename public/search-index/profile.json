@@ -1,0 +1,37 @@
+[
+  {
+    "key": "main.title",
+    "value": "Profile",
+    "selector": "#admin-profile-main-title",
+    "page": "/admin/profile",
+    "id": "admin-profile-main-title"
+  },
+  {
+    "key": "table.labels.profileImage",
+    "value": "Profile Image",
+    "selector": "label[for='admin-profile-table-labels-profileImage']",
+    "page": "/admin/profile",
+    "id": "admin-profile-table-labels-profileImage"
+  },
+  {
+    "key": "table.labels.name",
+    "value": "Name",
+    "selector": "label[for='admin-profile-table-labels-name']",
+    "page": "/admin/profile",
+    "id": "admin-profile-table-labels-name"
+  },
+  {
+    "key": "table.labels.email",
+    "value": "Email",
+    "selector": "label[for='admin-profile-table-labels-email']",
+    "page": "/admin/profile",
+    "id": "admin-profile-table-labels-email"
+  },
+  {
+    "key": "table.labels.role",
+    "value": "Role",
+    "selector": "label[for='admin-profile-table-labels-role']",
+    "page": "/admin/profile",
+    "id": "admin-profile-table-labels-role"
+  }
+]

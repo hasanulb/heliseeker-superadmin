@@ -26,3 +26,7 @@ export function postApi<T>(url: string, body: unknown): Promise<T> {
 export function patchApi<T>(url: string, body: unknown): Promise<T> {
   return request<T>(url, { method: "PATCH", body: JSON.stringify(body) })
 }
+
+export function deleteApi<T>(url: string, body: unknown): Promise<T> {
+  return request<T>(url, { method: "DELETE", body: JSON.stringify(body) })
+}

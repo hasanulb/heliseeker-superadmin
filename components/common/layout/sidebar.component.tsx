@@ -14,6 +14,7 @@ import {
   Search,
   Package,
   LogOut,
+  Languages,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -22,15 +23,27 @@ import { makeApiCall } from "@/lib/utils"
 import { AuthService } from "@/services/api/auth.service"
 import { useProfile } from "@/app/contexts/profile.context"
 
-export const MAIN_MENU = [
+export const PRIMARY_MENU = [
   { key: "home", icon: HomeIcon, label: "Dashboard", href: "/admin/home", submenu: null },
   { key: "centers", icon: Building2, label: "Centers", href: "/admin/centers", submenu: null },
+]
+
+export const MASTER_MENU = [
+  { key: "departments", icon: Building2, label: "Departments", href: "/admin/masters/departments", submenu: null },
+  { key: "languages", icon: Languages, label: "Languages", href: "/admin/masters/languages", submenu: null },
+  { key: "services", icon: Package, label: "Services", href: "/admin/masters/services", submenu: null },
+  { key: "specialization", icon: SlidersHorizontal, label: "Specialization", href: "/admin/masters/specializations", submenu: null },
+  { key: "age-groups", icon: UsersRound, label: "Age Groups", href: "/admin/masters/age-groups", submenu: null },
+]
+
+export const SECONDARY_MENU = [
   { key: "patients", icon: UsersRound, label: "Patients", href: "/admin/patients", submenu: null },
-  { key: "search-filters", icon: SlidersHorizontal, label: "Search Filters", href: "/admin/search-filters", submenu: null },
   { key: "access", icon: ShieldCheck, label: "Access", href: "/admin/access", submenu: null },
   { key: "flat-pages", icon: Files, label: "Flat Pages", href: "/admin/flat-pages", submenu: null },
   { key: "seo-tags", icon: Search, label: "SEO & Tags", href: "/admin/seo-tags", submenu: null },
 ]
+
+export const MAIN_MENU = [...PRIMARY_MENU, ...MASTER_MENU, ...SECONDARY_MENU]
 
 // Utility to get the default submenu key for a given primary key
 export function getDefaultSubmenuKey(primaryKey: string): string {
@@ -90,17 +103,81 @@ export function PrimarySidebar() {
         <Package className="w-8 h-8 text-purple-one" />
         {isExpanded && <span className="ml-2 font-bold text-lg whitespace-nowrap">Burjcon CMS</span>}
       </div>
-      {MAIN_MENU.map((item) => {
+      {PRIMARY_MENU.map((item) => {
         const hasSubmenu = Array.isArray(item.submenu) && item.submenu.length > 0;
+        const isActive = pathname.startsWith(item.href)
         return (
           <Link
             key={item.key}
             href={item.href}
             className={cn(
               "mb-6 flex items-center justify-center w-12 h-12 rounded-lg transition relative group",
-              pathname.startsWith(item.href) && "bg-sidebar-hovered text-sidebar-hovered-foreground",
+              isActive && "bg-sidebar-hovered text-sidebar-hovered-foreground",
               isExpanded ? "w-full px-4 justify-start" : "w-12 justify-center",
-              !pathname.startsWith(item.href) && "hover:bg-sidebar-hovered hover:text-sidebar-hovered-foreground"
+              !isActive && "hover:bg-sidebar-hovered hover:text-sidebar-hovered-foreground"
+            )}
+            title={item.label}
+          >
+            <item.icon className="w-6 h-6" />
+            {isExpanded && (
+              <>
+                <span className="ml-4 text-sm font-medium whitespace-nowrap">{item.label}</span>
+                {hasSubmenu && <ChevronRight className="ml-2 w-4 h-4 text-muted-foreground" />}
+              </>
+            )}
+            {!isExpanded && hasSubmenu && (
+              <ChevronRight className="absolute right-2 w-4 h-4 text-muted-foreground" />
+            )}
+          </Link>
+        );
+      })}
+
+      <div className={cn("my-3 w-full px-2", !isExpanded && "px-0")}>
+        <div className={cn("h-px w-full bg-border", isExpanded && "mb-2")} />
+        {isExpanded && <div className="px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Masters</div>}
+      </div>
+
+      {MASTER_MENU.map((item) => {
+        const hasSubmenu = Array.isArray(item.submenu) && item.submenu.length > 0;
+        const isActive = pathname.startsWith(item.href)
+        return (
+          <Link
+            key={item.key}
+            href={item.href}
+            className={cn(
+              "mb-6 flex items-center justify-center w-12 h-12 rounded-lg transition relative group",
+              isActive && "bg-sidebar-hovered text-sidebar-hovered-foreground",
+              isExpanded ? "w-full px-4 justify-start" : "w-12 justify-center",
+              !isActive && "hover:bg-sidebar-hovered hover:text-sidebar-hovered-foreground"
+            )}
+            title={item.label}
+          >
+            <item.icon className="w-6 h-6" />
+            {isExpanded && (
+              <>
+                <span className="ml-4 text-sm font-medium whitespace-nowrap">{item.label}</span>
+                {hasSubmenu && <ChevronRight className="ml-2 w-4 h-4 text-muted-foreground" />}
+              </>
+            )}
+            {!isExpanded && hasSubmenu && (
+              <ChevronRight className="absolute right-2 w-4 h-4 text-muted-foreground" />
+            )}
+          </Link>
+        );
+      })}
+
+      {SECONDARY_MENU.map((item) => {
+        const hasSubmenu = Array.isArray(item.submenu) && item.submenu.length > 0;
+        const isActive = pathname.startsWith(item.href)
+        return (
+          <Link
+            key={item.key}
+            href={item.href}
+            className={cn(
+              "mb-6 flex items-center justify-center w-12 h-12 rounded-lg transition relative group",
+              isActive && "bg-sidebar-hovered text-sidebar-hovered-foreground",
+              isExpanded ? "w-full px-4 justify-start" : "w-12 justify-center",
+              !isActive && "hover:bg-sidebar-hovered hover:text-sidebar-hovered-foreground"
             )}
             title={item.label}
           >

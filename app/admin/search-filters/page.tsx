@@ -1,8 +1,9 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useMemo } from "react"
+import { useMemo, useEffect } from "react"
 import { useForm } from "react-hook-form"
+import { useSearchParams } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,6 +16,10 @@ import { useCreateSearchFilter, useReorderSearchFilters, useSearchFilters, useUp
 import { createSearchFilterSchema, CreateSearchFilterFormValues } from "./_schemas/search-filter.schema"
 
 export default function SearchFiltersPage() {
+  const searchParams = useSearchParams()
+  const queryKind = searchParams.get("kind")
+  const validKinds = ["department", "therapy", "service", "ageRange", "location", "language"] as const
+  const defaultKind = validKinds.includes(queryKind as (typeof validKinds)[number]) ? queryKind : "department"
   const { data, isLoading } = useSearchFilters()
   const createMutation = useCreateSearchFilter()
   const updateMutation = useUpdateSearchFilter()
@@ -23,12 +28,18 @@ export default function SearchFiltersPage() {
   const form = useForm<CreateSearchFilterFormValues>({
     resolver: zodResolver(createSearchFilterSchema),
     defaultValues: {
-      kind: "department",
+      kind: defaultKind,
       name: "",
       description: "",
       parentId: "none",
     },
   })
+
+  useEffect(() => {
+    if (validKinds.includes(queryKind as (typeof validKinds)[number])) {
+      form.setValue("kind", queryKind as CreateSearchFilterFormValues["kind"], { shouldDirty: false })
+    }
+  }, [form, queryKind])
 
   const parentOptions = useMemo(() => data?.data || [], [data?.data])
 

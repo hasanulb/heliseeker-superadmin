@@ -324,6 +324,21 @@ export const ageGroups = pgTable("age_groups", {
 	pgPolicy("age_groups_manage_own", { as: "permissive", for: "all", to: ["authenticated"], using: sql`(auth.uid() = auth_user_id)`, withCheck: sql`(auth.uid() = auth_user_id)`  }),
 ]);
 
+export const languages = pgTable("languages", {
+	id: uuid().defaultRandom().primaryKey().notNull(),
+	name: text().notNull(),
+	description: text(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	authUserId: uuid("auth_user_id"),
+}, (table) => [
+	foreignKey({
+			columns: [table.authUserId],
+			foreignColumns: [users.id],
+			name: "languages_auth_user_id_fkey"
+		}),
+]);
+
 export const clientReferralRequests = pgTable("client_referral_requests", {
 	id: uuid().defaultRandom().primaryKey().notNull(),
 	centerUserId: uuid("center_user_id").notNull(),

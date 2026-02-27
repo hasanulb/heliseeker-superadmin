@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { usersInAuth, users, termsAndConditions, ageGroups, services, departments, specialists, specialistLanguages, specializations, specialistEducations, pricingSettings, customerProfiles, centerProfiles, clientReferralRequests, therapists, serviceSpecializations, serviceTherapists } from "./schema";
+import { usersInAuth, users, termsAndConditions, ageGroups, services, departments, specialists, specialistLanguages, specializations, specialistEducations, pricingSettings, customerProfiles, centerProfiles, languages, clientReferralRequests, therapists, serviceSpecializations, serviceTherapists } from "./schema";
 
 export const usersRelations = relations(users, ({one, many}) => ({
 	usersInAuth: one(usersInAuth, {
@@ -27,6 +27,7 @@ export const usersInAuthRelations = relations(usersInAuth, ({many}) => ({
 	customerProfiles: many(customerProfiles),
 	centerProfiles: many(centerProfiles),
 	ageGroups: many(ageGroups),
+	languages: many(languages),
 	clientReferralRequests: many(clientReferralRequests),
 	therapists: many(therapists),
 }));
@@ -128,6 +129,13 @@ export const centerProfilesRelations = relations(centerProfiles, ({one}) => ({
 	user: one(users, {
 		fields: [centerProfiles.userId],
 		references: [users.id]
+	}),
+}));
+
+export const languagesRelations = relations(languages, ({one}) => ({
+	usersInAuth: one(usersInAuth, {
+		fields: [languages.authUserId],
+		references: [usersInAuth.id]
 	}),
 }));
 

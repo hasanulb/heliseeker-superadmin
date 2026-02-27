@@ -58,3 +58,14 @@ export async function PATCH(request: NextRequest) {
 
   return NextResponse.json({ data: next.searchFilters.find((item) => item.id === payload.id) })
 }
+
+export async function DELETE(request: NextRequest) {
+  const payload = (await request.json()) as { id: string }
+
+  const next = await updateDb((current) => ({
+    ...current,
+    searchFilters: current.searchFilters.filter((item) => item.id !== payload.id),
+  }))
+
+  return NextResponse.json({ data: next.searchFilters })
+}

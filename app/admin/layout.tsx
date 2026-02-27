@@ -27,7 +27,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     };
   }, [mobileSidebarOpen]);
 
-  const selected = MAIN_MENU.find((item) => pathname.startsWith(item.href))?.key || "home"
+  const selected =
+    MAIN_MENU.find((item) => {
+      return pathname.startsWith(item.href)
+    })?.key || "home"
 
   const useIsMdUp = () => {
     const [isMdUp, setIsMdUp] = useState(false)
@@ -60,8 +63,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     const menu = MAIN_MENU.find((item) => item.key === selected);
     if (menu && Array.isArray(menu.submenu) && menu.submenu.length > 0) {
+      const queryKind = searchParams.get("kind")
+      const matchedKind = queryKind
+        ? menu.submenu.find((sub) => "kind" in sub && sub.kind === queryKind)
+        : undefined
       // Find a submenu whose href matches the current pathname
-      const matchedSub = menu.submenu.find((sub) => pathname.startsWith(sub.href));
+      const matchedSub = matchedKind || menu.submenu.find((sub) => pathname.startsWith(sub.href));
       if (matchedSub) {
         setSecondarySelected(matchedSub.key);
       } else {

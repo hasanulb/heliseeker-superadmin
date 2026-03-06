@@ -1,4 +1,4 @@
-export type CenterApprovalStatus = "pending" | "active" | "deactive" | "rejected" | "blacklisted"
+export type CenterApprovalStatus = "submitted" | "pending" | "active" | "deactive" | "rejected" | "blacklisted"
 
 export interface CenterProfile {
   id: string

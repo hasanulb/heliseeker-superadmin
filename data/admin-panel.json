@@ -132,11 +132,50 @@
   ],
   "staffUsers": [
     {
+      "id": "s_30fd30nt",
+      "name": "Hasanul Banna",
+      "email": "hasanulbannam0@gmail.com",
+      "role": "operator",
+      "active": true,
+      "permissions": [
+        {
+          "module": "centers",
+          "view": true,
+          "create": true,
+          "edit": false
+        },
+        {
+          "module": "department",
+          "view": true,
+          "create": true,
+          "edit": false
+        },
+        {
+          "module": "language",
+          "view": true,
+          "create": true,
+          "edit": false
+        },
+        {
+          "module": "ageGroup",
+          "view": true,
+          "create": true,
+          "edit": false
+        },
+        {
+          "module": "service",
+          "view": true,
+          "create": true,
+          "edit": false
+        }
+      ]
+    },
+    {
       "id": "s_1",
       "name": "Admin User",
       "email": "admin@burjcon.com",
       "role": "super_admin",
-      "active": true,
+      "active": false,
       "permissions": [
         {
           "module": "centers",

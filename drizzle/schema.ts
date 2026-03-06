@@ -2,6 +2,7 @@ import { boolean, pgEnum, pgTable, text, timestamp, uuid, varchar } from "drizzl
 import { sql } from "drizzle-orm"
 
 export const centerApprovalStatus = pgEnum("center_approval_status", [
+  "submitted",
   "pending",
   "active",
   "deactive",
@@ -16,7 +17,7 @@ export const centerProfiles = pgTable("center_profiles", {
   centerName: text("center_name").notNull(),
   contactEmail: text("contact_email"),
   contactPhone: text("contact_phone"),
-  approvalStatus: centerApprovalStatus("approval_status").notNull().default("pending"),
+  approvalStatus: centerApprovalStatus("approval_status").notNull().default("submitted"),
   approvalNote: text("approval_note"),
   decidedAt: timestamp("decided_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

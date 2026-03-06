@@ -1,4 +1,4 @@
-export type CenterStatus = "pending" | "active" | "deactive" | "rejected" | "blacklisted"
+export type CenterStatus = "submitted" | "pending" | "active" | "deactive" | "rejected" | "blacklisted"
 export type ReferralType = "patient" | "self"
 
 export interface Center {

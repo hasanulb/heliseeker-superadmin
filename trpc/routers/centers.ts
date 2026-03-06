@@ -6,7 +6,7 @@ import { db } from "@/db"
 import { centerProfiles } from "@/drizzle/schema"
 import { createTRPCRouter, publicProcedure } from "@/trpc/init"
 
-const centerStatusSchema = z.enum(["pending", "active", "deactive", "rejected", "blacklisted"])
+const centerStatusSchema = z.enum(["submitted", "pending", "active", "deactive", "rejected", "blacklisted"])
 
 const listCentersSchema = z.object({
   status: centerStatusSchema.optional(),
@@ -99,7 +99,7 @@ export const centersRouter = createTRPCRouter({
         centerName: input.centerName,
         contactEmail: input.contactEmail,
         contactPhone: input.contactPhone,
-        approvalStatus: "pending",
+        approvalStatus: "submitted",
       })
       .returning()
 
@@ -120,7 +120,7 @@ export const centersRouter = createTRPCRouter({
           centerName: input.centerName,
           contactEmail: input.contactEmail,
           contactPhone: input.contactPhone,
-          approvalStatus: "pending",
+          approvalStatus: "submitted",
           decidedAt: null,
           approvalNote: null,
         })
@@ -130,7 +130,7 @@ export const centersRouter = createTRPCRouter({
             centerName: input.centerName,
             contactEmail: input.contactEmail,
             contactPhone: input.contactPhone,
-            approvalStatus: "pending",
+            approvalStatus: "submitted",
             decidedAt: null,
             approvalNote: null,
           },

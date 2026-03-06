@@ -14,7 +14,15 @@ import { StaffTable } from "./_components/staff-table"
 import { useCreateStaffUser, useStaffUsers, useUpdateStaffUser } from "./_hooks/use-staff"
 import { createStaffSchema, CreateStaffFormValues } from "./_schemas/staff.schema"
 
-const MODULES = ["dashboard", "centers", "patients", "searchFilters", "flatPages", "seoTags"]
+const MODULES = [
+  { key: "centers", label: "Centers" },
+  { key: "department", label: "Department" },
+  { key: "language", label: "Language" },
+  { key: "service", label: "Service" },
+  { key: "specialization", label: "Specialization" },
+  { key: "ageGroup", label: "Age Group" },
+  { key: "flatPages", label: "Flat Pages" },
+]
 
 export default function AccessManagementPage() {
   const { data, isLoading } = useStaffUsers()
@@ -121,24 +129,24 @@ export default function AccessManagementPage() {
                     <div className="grid gap-2 md:grid-cols-3">
                       {MODULES.map((module) => (
                         <FormField
-                          key={module}
+                          key={module.key}
                           control={form.control}
                           name="modules"
                           render={({ field }) => (
                             <FormItem className="flex items-center gap-2 rounded border p-2">
                               <FormControl>
                                 <Checkbox
-                                  checked={field.value.includes(module)}
+                                  checked={field.value.includes(module.key)}
                                   onCheckedChange={(checked) => {
                                     if (checked) {
-                                      field.onChange([...field.value, module])
+                                      field.onChange([...field.value, module.key])
                                     } else {
-                                      field.onChange(field.value.filter((value) => value !== module))
+                                      field.onChange(field.value.filter((value) => value !== module.key))
                                     }
                                   }}
                                 />
                               </FormControl>
-                              <FormLabel className="m-0 capitalize">{module}</FormLabel>
+                              <FormLabel className="m-0">{module.label}</FormLabel>
                             </FormItem>
                           )}
                         />

@@ -4,7 +4,7 @@ import { useMemo } from "react"
 
 import { useTRPC } from "@/trpc/client"
 
-export type CenterApprovalStatus = "pending" | "active" | "deactive" | "rejected" | "blacklisted"
+export type CenterApprovalStatus = "submitted" | "pending" | "active" | "deactive" | "rejected" | "blacklisted"
 
 export function useCenterApproval() {
   const trpc = useTRPC()
@@ -19,7 +19,7 @@ export function useCenterApproval() {
     ...query,
     status,
     isApproved: status === "active",
-    isPending: status === "pending",
+    isPending: status === "submitted" || status === "pending",
     isRejected: status === "rejected" || status === "blacklisted" || status === "deactive",
   }
 }

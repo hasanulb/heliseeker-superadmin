@@ -6,27 +6,37 @@ const masterTableMap = {
   departments: {
     table: "departments",
     required: ["name"],
-    allowed: ["name", "description", "status", "auth_user_id", "updated_at"],
+    allowed: ["name", "description", "status", "auth_user_id"],
+    orderBy: { column: "created_at", ascending: false },
+    supportsUpdatedAt: true,
   },
   languages: {
     table: "languages",
     required: ["name"],
-    allowed: ["name", "description", "auth_user_id", "updated_at"],
+    allowed: ["name", "description", "auth_user_id"],
+    orderBy: { column: "name", ascending: true },
+    supportsUpdatedAt: false,
   },
   services: {
     table: "services",
     required: ["service_name", "department_id"],
-    allowed: ["service_name", "description", "department_id", "age_group_id", "status", "auth_user_id", "updated_at"],
+    allowed: ["service_name", "description", "department_id", "age_group_id", "status", "auth_user_id"],
+    orderBy: { column: "created_at", ascending: false },
+    supportsUpdatedAt: true,
   },
   specializations: {
     table: "specializations",
     required: ["name"],
-    allowed: ["name", "description", "auth_user_id", "updated_at"],
+    allowed: ["name", "description", "auth_user_id"],
+    orderBy: { column: "created_at", ascending: false },
+    supportsUpdatedAt: false,
   },
   "age-groups": {
     table: "age_groups",
     required: ["name"],
-    allowed: ["name", "description", "auth_user_id", "updated_at"],
+    allowed: ["name", "description", "auth_user_id"],
+    orderBy: { column: "name", ascending: true },
+    supportsUpdatedAt: false,
   },
 } as const
 
@@ -47,7 +57,10 @@ export async function GET(_request: NextRequest, { params }: { params: { slug: s
   }
 
   const supabase = await getServerSupabase()
-  const { data, error } = await supabase.from(config.table).select("*").order("created_at", { ascending: false })
+  const query = supabase.from(config.table).select("*")
+  const { data, error } = config.orderBy
+    ? await query.order(config.orderBy.column, { ascending: config.orderBy.ascending })
+    : await query
 
   if (error) {
     return NextResponse.json({ message: error.message }, { status: 500 })
@@ -102,7 +115,9 @@ export async function PATCH(request: NextRequest, { params }: { params: { slug: 
   const supabase = await getServerSupabase()
   const updatePayload = {
     ...pickAllowed(payload, config.allowed),
-    updated_at: new Date().toISOString(),
+  }
+  if (config.supportsUpdatedAt) {
+    updatePayload.updated_at = new Date().toISOString()
   }
 
   const { data, error } = await supabase.from(config.table).update(updatePayload).eq("id", id).select().single()

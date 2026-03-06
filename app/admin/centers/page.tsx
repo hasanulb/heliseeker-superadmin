@@ -13,8 +13,8 @@ export default function CentersPage() {
   const filters = filtersForm.watch()
   const { data, isLoading, error } = useCenters(filters)
   const centers = data?.data ?? []
-  const pendingCenters = centers.filter((center) => center.approvalStatus === "pending")
-  const completedCenters = centers.filter((center) => center.approvalStatus !== "pending")
+  const pendingCenters = centers.filter((center) => center.approvalStatus === "submitted")
+  const completedCenters = centers.filter((center) => center.approvalStatus !== "submitted")
 
   const updateStatusMutation = useUpdateCenterStatus()
   const deleteCenterMutation = useDeleteCenter()

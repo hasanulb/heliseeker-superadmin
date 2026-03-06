@@ -16,7 +16,7 @@ interface CentersTableProps {
   showDelete?: boolean
 }
 
-const statuses: CenterApprovalStatus[] = ["pending", "active", "deactive", "rejected", "blacklisted"]
+const statuses: CenterApprovalStatus[] = ["submitted", "active", "deactive", "rejected", "blacklisted", "pending"]
 
 export function CentersTable({
   centers,
@@ -48,7 +48,7 @@ export function CentersTable({
             <TableCell className="capitalize">{center.approvalStatus}</TableCell>
             {(showApprovalActions || showStatusSelect || showDelete) && (
               <TableCell className="text-right space-x-2">
-                {showApprovalActions && center.approvalStatus === "pending" && (
+                {showApprovalActions && center.approvalStatus === "submitted" && (
                   <>
                     <Button size="sm" onClick={() => onUpdateStatus(center.id, "active")}>
                       <Check className="h-4 w-4 mr-1" />Approve

@@ -4,7 +4,7 @@ const now = new Date().toISOString()
 
 export const defaultAdminDb: AdminPanelDb = {
   centers: [
-    { id: "c_1", name: "Hope Therapy Center", department: "Occupational Therapy", city: "New York", status: "pending", referralType: "patient", createdAt: now },
+    { id: "c_1", name: "Hope Therapy Center", department: "Occupational Therapy", city: "New York", status: "submitted", referralType: "patient", createdAt: now },
     { id: "c_2", name: "Bright Minds Clinic", department: "Speech Therapy", city: "Chicago", status: "active", referralType: "self", createdAt: now },
     { id: "c_3", name: "Sunrise Rehab Hub", department: "Physiotherapy", city: "Dallas", status: "rejected", referralType: "patient", approvalNote: "Missing license", createdAt: now },
   ],

@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     department: payload.department,
     city: payload.city,
     referralType: payload.referralType,
-    status: "pending",
+    status: "submitted",
     createdAt: new Date().toISOString(),
   }
 

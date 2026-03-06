@@ -11,7 +11,6 @@ import {
   SlidersHorizontal,
   ShieldCheck,
   Files,
-  Search,
   Package,
   LogOut,
   Languages,
@@ -37,10 +36,9 @@ export const MASTER_MENU = [
 ]
 
 export const SECONDARY_MENU = [
-  { key: "patients", icon: UsersRound, label: "Patients", href: "/admin/patients", submenu: null },
+  { key: "users", icon: UsersRound, label: "Users", href: "/admin/users", submenu: null },
   { key: "access", icon: ShieldCheck, label: "Access", href: "/admin/access", submenu: null },
   { key: "flat-pages", icon: Files, label: "Flat Pages", href: "/admin/flat-pages", submenu: null },
-  { key: "seo-tags", icon: Search, label: "SEO & Tags", href: "/admin/seo-tags", submenu: null },
 ]
 
 export const MAIN_MENU = [...PRIMARY_MENU, ...MASTER_MENU, ...SECONDARY_MENU]

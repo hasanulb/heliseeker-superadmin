@@ -1,7 +1,7 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useMemo, useState, useEffect } from "react"
+import { use, useMemo, useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
@@ -53,14 +53,15 @@ const masterItemSchema = z.object({
 
 type MasterFormValues = z.infer<typeof masterItemSchema>
 
-export default function MasterPage({ params }: { params: { slug: string } }) {
-  const config = masterConfig[params.slug as MasterKey]
+export default function MasterPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = use(params)
+  const config = masterConfig[slug as MasterKey]
   const [editingId, setEditingId] = useState<string | null>(null)
 
-  const { data, isLoading } = useMasterItems(params.slug)
-  const createMutation = useCreateMasterItem(params.slug)
-  const updateMutation = useUpdateMasterItem(params.slug)
-  const deleteMutation = useDeleteMasterItem(params.slug)
+  const { data, isLoading } = useMasterItems(slug)
+  const createMutation = useCreateMasterItem(slug)
+  const updateMutation = useUpdateMasterItem(slug)
+  const deleteMutation = useDeleteMasterItem(slug)
 
   const departmentQuery = useMasterItems("departments")
   const ageGroupQuery = useMasterItems("age-groups")
@@ -127,12 +128,12 @@ export default function MasterPage({ params }: { params: { slug: string } }) {
             <form
               className="grid gap-3 md:grid-cols-2"
               onSubmit={form.handleSubmit(async (values) => {
-                if (params.slug === "services" && !values.departmentId) {
+                if (slug === "services" && !values.departmentId) {
                   form.setError("departmentId", { message: "Department is required." })
                   return
                 }
                 const payload =
-                  params.slug === "services"
+                  slug === "services"
                     ? {
                         service_name: values.name,
                         description: values.description || undefined,
@@ -167,7 +168,7 @@ export default function MasterPage({ params }: { params: { slug: string } }) {
                 )}
               />
 
-              {params.slug === "services" && (
+              {slug === "services" && (
                 <FormField
                   control={form.control}
                   name="departmentId"
@@ -208,7 +209,7 @@ export default function MasterPage({ params }: { params: { slug: string } }) {
                 )}
               />
 
-              {params.slug === "services" && (
+              {slug === "services" && (
                 <FormField
                   control={form.control}
                   name="ageGroupId"
@@ -267,8 +268,8 @@ export default function MasterPage({ params }: { params: { slug: string } }) {
                   deleteMutation.mutate({ id })
                 }
               }}
-              showDepartment={params.slug === "services"}
-              showAgeGroup={params.slug === "services"}
+              showDepartment={slug === "services"}
+              showAgeGroup={slug === "services"}
               nameLabel={config.nameLabel}
             />
           )}

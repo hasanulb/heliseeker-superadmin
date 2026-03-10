@@ -46,6 +46,12 @@ export interface StaffPermission {
   edit: boolean
 }
 
+export interface Role {
+  id: string
+  name: string
+  permissions: StaffPermission[]
+}
+
 export interface StaffUser {
   id: string
   name: string
@@ -83,6 +89,7 @@ export interface AdminPanelDb {
   centers: Center[]
   patients: Patient[]
   searchFilters: SearchFilterItem[]
+  roles: Role[]
   staffUsers: StaffUser[]
   flatPages: FlatPage[]
   seo: SeoSettings

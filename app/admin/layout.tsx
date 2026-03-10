@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 
 import { Header, MobileSidebar, SearchModal, SecondarySidebar, PrimarySidebar, MAIN_MENU, getDefaultSubmenuKey } from "@/components/common"
 import { ProfileProvider } from "@/app/contexts/profile.context"
+import { createClient } from "@/utils/supabase/client"
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -29,7 +30,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const selected =
     MAIN_MENU.find((item) => {
-      return pathname.startsWith(item.href)
+      if (pathname.startsWith(item.href)) return true
+      return Array.isArray(item.submenu) && item.submenu.some((sub) => pathname.startsWith(sub.href))
     })?.key || "home"
 
   const useIsMdUp = () => {
@@ -51,6 +53,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const isMdUp = useIsMdUp()
 
   useEffect(() => {
+    const enforcePasswordChange = async () => {
+      if (pathname.startsWith("/admin/change-password")) return
+      const supabase = createClient()
+      const { data } = await supabase.auth.getUser()
+      const mustChange = Boolean(data?.user?.user_metadata?.must_change_password)
+      if (mustChange) {
+        window.location.href = "/admin/change-password"
+      }
+    }
+    enforcePasswordChange()
+  }, [pathname])
+
+  useEffect(() => {
     setRouteChanging(true)
 
     const timeout = setTimeout(() => {
@@ -60,8 +75,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return () => clearTimeout(timeout)
   }, [pathname]) // Triggers on full page navigation
 
+  const hasSecondarySidebar =
+    selected !== "user-management" &&
+    selected !== "customers" &&
+    Boolean(MAIN_MENU.find((item) => item.key === selected)?.submenu?.length)
+
   useEffect(() => {
     const menu = MAIN_MENU.find((item) => item.key === selected);
+    if (!hasSecondarySidebar || !menu || !Array.isArray(menu.submenu) || menu.submenu.length === 0) {
+      setSecondarySelected("")
+      return
+    }
     if (menu && Array.isArray(menu.submenu) && menu.submenu.length > 0) {
       const queryKind = searchParams.get("kind")
       const matchedKind = queryKind
@@ -74,14 +98,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       } else {
         setSecondarySelected(getDefaultSubmenuKey(selected));
       }
-    } else {
-      setSecondarySelected("");
     }
-  }, [selected, pathname]);
+  }, [selected, pathname, hasSecondarySidebar]);
 
   const marginLeft = secondaryCollapsed
     ? 64 + 64
-    : MAIN_MENU.find((item) => item.key === selected)?.submenu
+    : hasSecondarySidebar
     ? 16 + 270
     : 64
 
@@ -92,15 +114,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="hidden md:block">
           <PrimarySidebar />
         </div>
-        <div className="hidden md:block">
-          <SecondarySidebar
-            selected={selected}
-            secondarySelected={secondarySelected}
-            onSecondarySelect={setSecondarySelected}
-            collapsed={secondaryCollapsed}
-            onCollapse={setSecondaryCollapsed}
-          />
-        </div>
+        {hasSecondarySidebar && (
+          <div className="hidden md:block">
+            <SecondarySidebar
+              selected={selected}
+              secondarySelected={secondarySelected}
+              onSecondarySelect={setSecondarySelected}
+              collapsed={secondaryCollapsed}
+              onCollapse={setSecondaryCollapsed}
+            />
+          </div>
+        )}
         {/* Main Content */}
         <div className="flex-1 flex flex-col overflow-hidden ml-0 md:ml-16" style={isMdUp ? { marginLeft } : undefined}>
           <Header 

@@ -5,9 +5,11 @@ import { cn } from "@/lib/utils"
 import { usePathname } from "next/navigation"
 
 import { MASTER_MENU, PRIMARY_MENU, SECONDARY_MENU } from "./sidebar.component"
+import { useAccess } from "@/app/admin/access/_hooks/use-access"
 
 export function MobileSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
     const pathname = usePathname();
+    const access = useAccess();
 
     const handleItemClick = () => {
         onClose()
@@ -31,7 +33,7 @@ export function MobileSidebar({ open, onClose }: { open: boolean; onClose: () =>
                 onClick={e => e.stopPropagation()}
             >
                 <nav className="flex flex-col gap-2">
-                    {PRIMARY_MENU.map(item => (
+                    {PRIMARY_MENU.filter(item => !item.module || !access.isReady || access.can(item.module, "view")).map(item => (
                         <Link
                             key={item.key}
                             href={item.href}
@@ -50,7 +52,7 @@ export function MobileSidebar({ open, onClose }: { open: boolean; onClose: () =>
                         <div className="px-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Masters</div>
                     </div>
 
-                    {MASTER_MENU.map(item => (
+                    {MASTER_MENU.filter(item => !item.module || !access.isReady || access.can(item.module, "view")).map(item => (
                         <Link
                             key={item.key}
                             href={item.href}
@@ -65,19 +67,42 @@ export function MobileSidebar({ open, onClose }: { open: boolean; onClose: () =>
                         </Link>
                     ))}
 
-                    {SECONDARY_MENU.map(item => (
-                        <Link
-                            key={item.key}
-                            href={item.href}
-                            className={cn(
-                                "flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium hover:bg-muted transition",
-                                pathname && pathname.startsWith(item.href) && "text-purple-one font-semibold"
+                    <div className="mt-3 border-t border-border pt-3">
+                        <div className="px-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Users</div>
+                    </div>
+
+                    {SECONDARY_MENU.filter(item => !item.module || !access.isReady || access.can(item.module, "view")).map(item => (
+                        <div key={item.key}>
+                            <Link
+                                href={item.href}
+                                className={cn(
+                                    "flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium hover:bg-muted transition",
+                                    pathname && pathname.startsWith(item.href) && "text-purple-one font-semibold"
+                                )}
+                                onClick={handleItemClick}
+                            >
+                                {item.icon && <item.icon className="w-5 h-5" />}
+                                <span>{item.label}</span>
+                            </Link>
+                            {Array.isArray(item.submenu) && item.submenu.length > 0 && (
+                                <div className="ml-6 mt-1 flex flex-col gap-1">
+                                    {item.submenu.map(sub => (
+                                        <Link
+                                            key={sub.key}
+                                            href={sub.href}
+                                            className={cn(
+                                                "flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium hover:bg-muted transition",
+                                                pathname && pathname.startsWith(sub.href) && "text-purple-one font-semibold"
+                                            )}
+                                            onClick={handleItemClick}
+                                        >
+                                            <sub.icon className="w-4 h-4" />
+                                            <span>{sub.label}</span>
+                                        </Link>
+                                    ))}
+                                </div>
                             )}
-                            onClick={handleItemClick}
-                        >
-                            {item.icon && <item.icon className="w-5 h-5" />}
-                            <span>{item.label}</span>
-                        </Link>
+                        </div>
                     ))}
                 </nav>
             </aside>

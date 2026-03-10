@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
+import crypto from "node:crypto"
 
 import { getServerSupabase } from "@/app/api/_lib/supabase"
+import { getServiceRoleSupabase } from "@/app/api/_lib/supabase-admin"
 
 export async function GET(request: NextRequest) {
   const query = request.nextUrl.searchParams.get("q")?.toLowerCase() || ""
@@ -36,4 +38,73 @@ export async function GET(request: NextRequest) {
     : normalized
 
   return NextResponse.json({ data: filtered })
+}
+
+export async function POST(request: NextRequest) {
+  const payload = (await request.json()) as { name: string; email: string }
+  const name = payload.name?.trim()
+  const email = payload.email?.trim().toLowerCase()
+
+  if (!name || !email) {
+    return NextResponse.json({ message: "Name and email are required" }, { status: 400 })
+  }
+
+  const tempPassword = `Temp@${crypto.randomBytes(6).toString("hex")}`
+  const adminSupabase = getServiceRoleSupabase()
+
+  const { data: created, error: createError } = await adminSupabase.auth.admin.createUser({
+    email,
+    password: tempPassword,
+    email_confirm: true,
+    user_metadata: { must_change_password: true },
+  })
+
+  if (createError || !created?.user?.id) {
+    return NextResponse.json({ message: createError?.message || "Failed to create user" }, { status: 500 })
+  }
+
+  const authUserId = created.user.id
+
+  const { data: userRow, error: userError } = await adminSupabase
+    .from("users")
+    .insert([
+      {
+        auth_user_id: authUserId,
+        email,
+        user_type: "customer",
+        is_verified: false,
+      },
+    ])
+    .select()
+    .single()
+
+  if (userError || !userRow?.id) {
+    await adminSupabase.auth.admin.deleteUser(authUserId)
+    return NextResponse.json({ message: userError?.message || "Failed to create user record" }, { status: 500 })
+  }
+
+  const { error: profileError } = await adminSupabase.from("customer_profiles").insert([
+    {
+      auth_user_id: userRow.id,
+      user_id: userRow.id,
+      guardian_name: name,
+    },
+  ])
+  if (profileError) {
+    // Profile is optional for listing; proceed with created user
+  }
+
+  return NextResponse.json(
+    {
+      data: {
+        id: userRow.id,
+        name,
+        email,
+        isVerified: userRow.is_verified ?? false,
+        createdAt: userRow.created_at,
+      },
+      tempPassword,
+    },
+    { status: 201 },
+  )
 }

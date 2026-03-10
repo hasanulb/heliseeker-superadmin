@@ -39,6 +39,23 @@ export const defaultAdminDb: AdminPanelDb = {
     { id: "f_6", kind: "location", name: "Map Enabled", description: "Google Map Integration", enabled: true, order: 1 },
     { id: "f_7", kind: "language", name: "English", enabled: true, order: 1 },
   ],
+  roles: [
+    {
+      id: "r_1",
+      name: "Manager",
+      permissions: [
+        { module: "centers", view: true, create: true, edit: true },
+        { module: "patients", view: true, create: false, edit: true },
+      ],
+    },
+    {
+      id: "r_2",
+      name: "Operator",
+      permissions: [
+        { module: "centers", view: true, create: false, edit: false },
+      ],
+    },
+  ],
   staffUsers: [
     {
       id: "s_1",

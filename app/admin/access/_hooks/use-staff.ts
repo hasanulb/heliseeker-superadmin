@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { getApi, patchApi, postApi } from "@/lib/admin-panel/client"
 
-import { CreateStaffPayload, StaffResponse } from "../_types"
+import { CreateStaffPayload, CreateStaffResponse, StaffResponse } from "../_types"
 
 export function useStaffUsers() {
   return useQuery({
@@ -14,7 +14,7 @@ export function useStaffUsers() {
 export function useCreateStaffUser() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (payload: CreateStaffPayload) => postApi("/api/admin/staff", payload),
+    mutationFn: (payload: CreateStaffPayload) => postApi<CreateStaffResponse>("/api/admin/staff", payload),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-staff"] }),
   })
 }

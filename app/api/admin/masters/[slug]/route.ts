@@ -57,7 +57,29 @@ export async function GET(_request: NextRequest, { params }: { params: { slug: s
   }
 
   const supabase = await getServerSupabase()
-  const query = supabase.from(config.table).select("*")
+  let query = supabase.from(config.table).select("*")
+
+  if (params.slug === "specializations") {
+    const { data: adminUsers, error: adminError } = await supabase
+      .from("admins")
+      .select("auth_user_id")
+      .not("auth_user_id", "is", null)
+
+    if (adminError) {
+      return NextResponse.json({ message: adminError.message }, { status: 500 })
+    }
+
+    const adminIds = (adminUsers || [])
+      .map((row) => row.auth_user_id)
+      .filter((id): id is string => Boolean(id))
+
+    if (adminIds.length === 0) {
+      return NextResponse.json({ data: [] })
+    }
+
+    query = query.in("auth_user_id", adminIds)
+  }
+
   const { data, error } = config.orderBy
     ? await query.order(config.orderBy.column, { ascending: config.orderBy.ascending })
     : await query

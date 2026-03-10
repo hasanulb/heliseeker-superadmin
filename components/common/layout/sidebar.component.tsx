@@ -21,24 +21,43 @@ import { useToast } from "@/hooks/use-toast"
 import { makeApiCall } from "@/lib/utils"
 import { AuthService } from "@/services/api/auth.service"
 import { useProfile } from "@/app/contexts/profile.context"
+import { useAccess } from "@/app/admin/access/_hooks/use-access"
+import Image from "next/image"
+import logo from "./logo.png"
 
 export const PRIMARY_MENU = [
   { key: "home", icon: HomeIcon, label: "Dashboard", href: "/admin/home", submenu: null },
-  { key: "centers", icon: Building2, label: "Centers", href: "/admin/centers", submenu: null },
+  { key: "centers", icon: Building2, label: "Centers", href: "/admin/centers", submenu: null, module: "centers" },
 ]
 
 export const MASTER_MENU = [
-  { key: "departments", icon: Building2, label: "Departments", href: "/admin/masters/departments", submenu: null },
-  { key: "languages", icon: Languages, label: "Languages", href: "/admin/masters/languages", submenu: null },
-  { key: "services", icon: Package, label: "Services", href: "/admin/masters/services", submenu: null },
-  { key: "specialization", icon: SlidersHorizontal, label: "Specialization", href: "/admin/masters/specializations", submenu: null },
-  { key: "age-groups", icon: UsersRound, label: "Age Groups", href: "/admin/masters/age-groups", submenu: null },
+  { key: "departments", icon: Building2, label: "Departments", href: "/admin/masters/departments", submenu: null, module: "department" },
+  { key: "services", icon: Package, label: "Services", href: "/admin/masters/services", submenu: null, module: "service" },
+  { key: "specialization", icon: SlidersHorizontal, label: "Specialization", href: "/admin/masters/specializations", submenu: null, module: "specialization" },
+  { key: "age-groups", icon: UsersRound, label: "Age Groups", href: "/admin/masters/age-groups", submenu: null, module: "ageGroup" },
 ]
 
 export const SECONDARY_MENU = [
-  { key: "users", icon: UsersRound, label: "Users", href: "/admin/users", submenu: null },
-  { key: "access", icon: ShieldCheck, label: "Access", href: "/admin/access", submenu: null },
-  { key: "flat-pages", icon: Files, label: "Flat Pages", href: "/admin/flat-pages", submenu: null },
+  {
+    key: "customers",
+    icon: UsersRound,
+    label: "Customers",
+    href: "/admin/users",
+    submenu: null,
+    module: "customers",
+  },
+  {
+    key: "user-management",
+    icon: ShieldCheck,
+    label: "User Management",
+    href: "/admin/user-management/users",
+    submenu: [
+      { key: "staff-users", icon: UsersRound, label: "Users", href: "/admin/user-management/users" },
+      { key: "user-roles", icon: ShieldCheck, label: "User Roles", href: "/admin/access" },
+    ],
+    module: "userManagement",
+  },
+  { key: "flat-pages", icon: Files, label: "Flat Pages", href: "/admin/flat-pages", submenu: null, module: "flatPages" },
 ]
 
 export const MAIN_MENU = [...PRIMARY_MENU, ...MASTER_MENU, ...SECONDARY_MENU]
@@ -71,6 +90,12 @@ export function PrimarySidebar() {
   const pathname = usePathname();
   const { toast } = useToast();
   const { setProfile } = useProfile();
+  const access = useAccess();
+
+  const canView = (moduleKey?: string) => {
+    if (!moduleKey) return true
+    return access.isReady ? access.can(moduleKey, "view") : true
+  }
 
   const handleLogout = async () => {
     await makeApiCall(() => new AuthService().logout(), {
@@ -98,10 +123,10 @@ export function PrimarySidebar() {
     >
       {/* Logo and Admin Panel Name */}
       <div className={cn("flex items-center w-full px-2 mb-8", isExpanded ? "justify-start" : "justify-center")}> 
-        <Package className="w-8 h-8 text-purple-one" />
-        {isExpanded && <span className="ml-2 font-bold text-lg whitespace-nowrap">Burjcon CMS</span>}
+        <Image src={logo} alt="Logo" width={26} height={26} className="w-8 h-8" />
+        {isExpanded && <span className="ml-2 font-bold text-lg whitespace-nowrap">Heli Seeker</span>}
       </div>
-      {PRIMARY_MENU.map((item) => {
+      {PRIMARY_MENU.filter((item) => canView(item.module)).map((item) => {
         const hasSubmenu = Array.isArray(item.submenu) && item.submenu.length > 0;
         const isActive = pathname.startsWith(item.href)
         return (
@@ -135,7 +160,7 @@ export function PrimarySidebar() {
         {isExpanded && <div className="px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Masters</div>}
       </div>
 
-      {MASTER_MENU.map((item) => {
+      {MASTER_MENU.filter((item) => canView(item.module)).map((item) => {
         const hasSubmenu = Array.isArray(item.submenu) && item.submenu.length > 0;
         const isActive = pathname.startsWith(item.href)
         return (
@@ -164,32 +189,58 @@ export function PrimarySidebar() {
         );
       })}
 
-      {SECONDARY_MENU.map((item) => {
+      <div className={cn("my-3 w-full px-2", !isExpanded && "px-0")}>
+        <div className={cn("h-px w-full bg-border", isExpanded && "mb-2")} />
+        {isExpanded && <div className="px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Users</div>}
+      </div>
+
+      {SECONDARY_MENU.filter((item) => canView(item.module)).map((item) => {
         const hasSubmenu = Array.isArray(item.submenu) && item.submenu.length > 0;
-        const isActive = pathname.startsWith(item.href)
+        const isActive = pathname.startsWith(item.href) || (hasSubmenu && item.submenu!.some((sub) => pathname.startsWith(sub.href)))
         return (
-          <Link
-            key={item.key}
-            href={item.href}
-            className={cn(
-              "mb-6 flex items-center justify-center w-12 h-12 rounded-lg transition relative group",
-              isActive && "bg-sidebar-hovered text-sidebar-hovered-foreground",
-              isExpanded ? "w-full px-4 justify-start" : "w-12 justify-center",
-              !isActive && "hover:bg-sidebar-hovered hover:text-sidebar-hovered-foreground"
+          <div key={item.key} className={cn(isExpanded ? "w-full" : "w-12")}>
+            <Link
+              href={item.href}
+              className={cn(
+                "mb-2 flex items-center justify-center h-12 rounded-lg transition relative group",
+                isActive && "bg-sidebar-hovered text-sidebar-hovered-foreground",
+                isExpanded ? "w-full px-4 justify-start" : "w-12 justify-center",
+                !isActive && "hover:bg-sidebar-hovered hover:text-sidebar-hovered-foreground"
+              )}
+              title={item.label}
+            >
+              <item.icon className="w-6 h-6" />
+              {isExpanded && (
+                <>
+                  <span className="ml-4 text-sm font-medium whitespace-nowrap">{item.label}</span>
+                  {hasSubmenu && <ChevronRight className="ml-2 w-4 h-4 text-muted-foreground" />}
+                </>
+              )}
+              {!isExpanded && hasSubmenu && (
+                <ChevronRight className="absolute right-2 w-4 h-4 text-muted-foreground" />
+              )}
+            </Link>
+
+            {isExpanded && hasSubmenu && (
+              <div className="mb-4 ml-10 flex flex-col gap-1">
+                {item.submenu!.map((sub) => {
+                  const subActive = pathname.startsWith(sub.href)
+                  return (
+                    <Link
+                      key={sub.key}
+                      href={sub.href}
+                      className={cn(
+                        "rounded px-2 py-1 text-sm transition",
+                        subActive ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {sub.label}
+                    </Link>
+                  )
+                })}
+              </div>
             )}
-            title={item.label}
-          >
-            <item.icon className="w-6 h-6" />
-            {isExpanded && (
-              <>
-                <span className="ml-4 text-sm font-medium whitespace-nowrap">{item.label}</span>
-                {hasSubmenu && <ChevronRight className="ml-2 w-4 h-4 text-muted-foreground" />}
-              </>
-            )}
-            {!isExpanded && hasSubmenu && (
-              <ChevronRight className="absolute right-2 w-4 h-4 text-muted-foreground" />
-            )}
-          </Link>
+          </div>
         );
       })}
       {/* Quick Logout Button */}

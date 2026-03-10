@@ -130,6 +130,92 @@
       "order": 1772166068573
     }
   ],
+  "roles": [
+    {
+      "id": "r_2rxtcs55",
+      "name": "staff",
+      "permissions": [
+        {
+          "module": "centers",
+          "view": true,
+          "create": false,
+          "edit": false
+        }
+      ]
+    },
+    {
+      "id": "r_p86tcx9x",
+      "name": "manager",
+      "permissions": [
+        {
+          "module": "centers",
+          "view": true,
+          "create": false,
+          "edit": false
+        },
+        {
+          "module": "department",
+          "view": true,
+          "create": false,
+          "edit": true
+        },
+        {
+          "module": "service",
+          "view": true,
+          "create": true,
+          "edit": false
+        },
+        {
+          "module": "specialization",
+          "view": true,
+          "create": false,
+          "edit": false
+        },
+        {
+          "module": "ageGroup",
+          "view": true,
+          "create": true,
+          "edit": false
+        },
+        {
+          "module": "flatPages",
+          "view": true,
+          "create": false,
+          "edit": false
+        }
+      ]
+    },
+    {
+      "id": "r_1",
+      "name": "Manager",
+      "permissions": [
+        {
+          "module": "centers",
+          "view": true,
+          "create": true,
+          "edit": true
+        },
+        {
+          "module": "patients",
+          "view": true,
+          "create": false,
+          "edit": true
+        }
+      ]
+    },
+    {
+      "id": "r_2",
+      "name": "Operator",
+      "permissions": [
+        {
+          "module": "centers",
+          "view": true,
+          "create": false,
+          "edit": false
+        }
+      ]
+    }
+  ],
   "staffUsers": [
     {
       "id": "s_30fd30nt",

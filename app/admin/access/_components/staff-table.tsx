@@ -1,14 +1,14 @@
-import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { StaffUser } from "@/lib/admin-panel/types"
+import { StaffUserRow } from "../_types"
 
 interface StaffTableProps {
-  users: StaffUser[]
+  users: StaffUserRow[]
   onToggleStatus: (id: string, active: boolean) => void
+  canEdit?: boolean
 }
 
-export function StaffTable({ users, onToggleStatus }: StaffTableProps) {
+export function StaffTable({ users, onToggleStatus, canEdit = true }: StaffTableProps) {
   return (
     <Table>
       <TableHeader>
@@ -16,7 +16,6 @@ export function StaffTable({ users, onToggleStatus }: StaffTableProps) {
           <TableHead>Name</TableHead>
           <TableHead>Email</TableHead>
           <TableHead>Role</TableHead>
-          <TableHead>Module Permissions</TableHead>
           <TableHead>Status</TableHead>
         </TableRow>
       </TableHeader>
@@ -26,16 +25,15 @@ export function StaffTable({ users, onToggleStatus }: StaffTableProps) {
             <TableCell className="font-medium">{user.name}</TableCell>
             <TableCell>{user.email}</TableCell>
             <TableCell className="capitalize">{user.role.replace("_", " ")}</TableCell>
-            <TableCell className="space-x-1">
-              {user.permissions.map((permission) => (
-                <Badge key={`${user.id}-${permission.module}`} variant="outline">
-                  {permission.module}: {permission.view ? "V" : "-"}/{permission.create ? "C" : "-"}/{permission.edit ? "E" : "-"}
-                </Badge>
-              ))}
-            </TableCell>
             <TableCell>
               <div className="flex items-center gap-2">
-                <Switch checked={user.active} onCheckedChange={(checked) => onToggleStatus(user.id, checked)} />
+                <Switch
+                  checked={user.active}
+                  disabled={!canEdit}
+                  onCheckedChange={(checked) => {
+                    if (canEdit) onToggleStatus(user.id, checked)
+                  }}
+                />
                 <span>{user.active ? "Active" : "Disabled"}</span>
               </div>
             </TableCell>

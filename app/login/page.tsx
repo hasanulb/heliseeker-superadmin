@@ -37,14 +37,19 @@ export default function LoginPage() {
 
     const loginMutation = useMutation(
         trpc.auth.login.mutationOptions({
-            onSuccess: () => {
+            onSuccess: (result) => {
+                const mustChangePassword = Boolean(
+                    (result as any)?.data?.user?.user_metadata?.must_change_password
+                )
                 toast({
                     title: "Login Successful",
-                    description: "Redirecting to dashboard...",
+                    description: mustChangePassword
+                        ? "Please update your password to continue."
+                        : "Redirecting to dashboard...",
                     variant: "success",
                 })
                 form.reset()
-                router.push("/admin")
+                router.push(mustChangePassword ? "/admin/change-password" : "/admin")
                 router.refresh()
             },
             onError: (error) => {

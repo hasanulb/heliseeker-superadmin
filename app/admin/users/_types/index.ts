@@ -9,3 +9,13 @@ export interface UserItem {
 export interface UsersResponse {
   data: UserItem[]
 }
+
+export interface CreateUserPayload {
+  name: string
+  email: string
+}
+
+export interface CreateUserResponse {
+  data: UserItem
+  tempPassword: string
+}

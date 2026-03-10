@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { use, useMemo, useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
+import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,17 +14,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 import { useCreateMasterItem, useDeleteMasterItem, useMasterItems, useUpdateMasterItem } from "../_hooks/use-masters"
 import { MasterTable } from "../_components/master-table"
+import { useToast } from "@/hooks/use-toast"
+import { createClient } from "@/utils/supabase/client"
+import { useRequirePermission } from "@/app/admin/access/_hooks/use-access"
 
 const masterConfig = {
   departments: {
     title: "Departments",
     description: "Create and manage departments shown in the center portal dropdown.",
     nameLabel: "Department Name",
-  },
-  languages: {
-    title: "Languages",
-    description: "Create and manage supported languages for centers.",
-    nameLabel: "Language Name",
   },
   services: {
     title: "Services",
@@ -55,8 +54,11 @@ type MasterFormValues = z.infer<typeof masterItemSchema>
 
 export default function MasterPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params)
+  const router = useRouter()
+  const { toast } = useToast()
   const config = masterConfig[slug as MasterKey]
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [tableQuery, setTableQuery] = useState("")
 
   const { data, isLoading } = useMasterItems(slug)
   const createMutation = useCreateMasterItem(slug)
@@ -70,6 +72,60 @@ export default function MasterPage({ params }: { params: Promise<{ slug: string 
     resolver: zodResolver(masterItemSchema),
     defaultValues: { name: "", description: "", departmentId: "", ageGroupId: "none" },
   })
+
+  const moduleKey =
+    slug === "departments"
+      ? "department"
+      : slug === "services"
+      ? "service"
+      : slug === "specializations"
+      ? "specialization"
+      : "ageGroup"
+
+  const access = useRequirePermission(moduleKey, "view")
+
+  if (!access.isReady) {
+    return <p className="text-sm text-muted-foreground">Loading...</p>
+  }
+
+  useEffect(() => {
+    let active = true
+    const checkSession = async () => {
+      const supabase = createClient()
+      const { data, error } = await supabase.auth.getUser()
+      if (!active) return
+      if (error || !data?.user) {
+        toast({
+          title: "Session expired",
+          description: "Please log in again.",
+          variant: "destructive",
+        })
+        router.push("/login")
+      }
+    }
+    checkSession()
+    return () => {
+      active = false
+    }
+  }, [router, toast])
+
+  const entityLabel = config?.title?.endsWith("s")
+    ? config.title.slice(0, -1)
+    : config?.title || "Item"
+
+  const handleAuthError = (err: any) => {
+    const message = err?.message || "Error"
+    if (/not authenticated|unauthorized/i.test(message)) {
+      toast({
+        title: "Session expired",
+        description: "Please log in again.",
+        variant: "destructive",
+      })
+      router.push("/login")
+      return true
+    }
+    return false
+  }
 
   useEffect(() => {
     if (!editingId) {
@@ -103,6 +159,16 @@ export default function MasterPage({ params }: { params: Promise<{ slug: string 
     }))
   }, [data?.data, departmentQuery.data?.data, ageGroupQuery.data?.data])
 
+  const filteredItems = useMemo(() => {
+    if (!tableQuery.trim()) return items
+    const term = tableQuery.trim().toLowerCase()
+    return items.filter((item) =>
+      [item.name, item.description, item.departmentName, item.ageGroupName]
+        .filter(Boolean)
+        .some((value) => value!.toLowerCase().includes(term)),
+    )
+  }, [items, tableQuery])
+
   if (!config) {
     return (
       <div className="space-y-2">
@@ -119,7 +185,8 @@ export default function MasterPage({ params }: { params: Promise<{ slug: string 
         <p className="text-sm text-muted-foreground">{config.description}</p>
       </div>
 
-      <Card>
+      {access.can(moduleKey, "create") && (
+        <Card>
         <CardHeader>
           <CardTitle>{editingId ? `Edit ${config.title}` : `Create ${config.title}`}</CardTitle>
         </CardHeader>
@@ -145,13 +212,32 @@ export default function MasterPage({ params }: { params: Promise<{ slug: string 
                         description: values.description || undefined,
                       }
 
-                if (editingId) {
-                  await updateMutation.mutateAsync({ id: editingId, ...payload })
-                  setEditingId(null)
-                } else {
-                  await createMutation.mutateAsync(payload)
+                try {
+                  if (editingId) {
+                    await updateMutation.mutateAsync({ id: editingId, ...payload })
+                    toast({
+                      title: "Updated",
+                      description: `${entityLabel} updated successfully.`,
+                      variant: "success",
+                    })
+                    setEditingId(null)
+                  } else {
+                    await createMutation.mutateAsync(payload)
+                    toast({
+                      title: "Created",
+                      description: `${entityLabel} created successfully.`,
+                      variant: "success",
+                    })
+                  }
+                  form.reset({ name: "", description: "", departmentId: "", ageGroupId: "none" })
+                } catch (err: any) {
+                  if (handleAuthError(err)) return
+                  toast({
+                    title: "Error",
+                    description: err?.message || `Failed to save ${entityLabel.toLowerCase()}.`,
+                    variant: "destructive",
+                  })
                 }
-                form.reset({ name: "", description: "", departmentId: "", ageGroupId: "none" })
               })}
             >
               <FormField
@@ -195,19 +281,21 @@ export default function MasterPage({ params }: { params: Promise<{ slug: string 
                 />
               )}
 
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {slug !== "specializations" && (
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               {slug === "services" && (
                 <FormField
@@ -251,25 +339,51 @@ export default function MasterPage({ params }: { params: Promise<{ slug: string 
           </Form>
         </CardContent>
       </Card>
+      )}
 
       <Card>
         <CardHeader>
           <CardTitle>{config.title} Table</CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="mb-4">
+            <Input
+              placeholder={`Search ${config.title.toLowerCase()}`}
+              value={tableQuery}
+              onChange={(event) => setTableQuery(event.target.value)}
+            />
+          </div>
           {isLoading ? (
             <p className="text-sm text-muted-foreground">Loading {config.title.toLowerCase()}...</p>
           ) : (
             <MasterTable
-              items={items}
+              items={filteredItems}
               onEdit={(id) => setEditingId(id)}
               onDelete={(id) => {
                 if (window.confirm("Delete this item? This cannot be undone.")) {
-                  deleteMutation.mutate({ id })
+                  deleteMutation.mutateAsync({ id })
+                    .then(() => {
+                      toast({
+                        title: "Deleted",
+                        description: `${entityLabel} deleted successfully.`,
+                        variant: "success",
+                      })
+                    })
+                    .catch((err: any) => {
+                      if (handleAuthError(err)) return
+                      toast({
+                        title: "Error",
+                        description: err?.message || `Failed to delete ${entityLabel.toLowerCase()}.`,
+                        variant: "destructive",
+                      })
+                    })
                 }
               }}
+              canEdit={access.can(moduleKey, "edit")}
+              canDelete={access.can(moduleKey, "edit")}
               showDepartment={slug === "services"}
               showAgeGroup={slug === "services"}
+              showDescription={slug !== "specializations"}
               nameLabel={config.nameLabel}
             />
           )}

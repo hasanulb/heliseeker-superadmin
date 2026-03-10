@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
-import { getApi, patchApi } from "@/lib/admin-panel/client"
+import { getApi, patchApi, postApi } from "@/lib/admin-panel/client"
 
-import { UsersResponse } from "../_types"
+import { CreateUserPayload, CreateUserResponse, UsersResponse } from "../_types"
 
 export function useUsers(query: string) {
   return useQuery({
@@ -20,6 +20,17 @@ export function useToggleUserVerification() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] })
       queryClient.invalidateQueries({ queryKey: ["admin-dashboard"] })
+    },
+  })
+}
+
+export function useCreateUser() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (payload: CreateUserPayload) => postApi<CreateUserResponse>("/api/admin/users", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] })
     },
   })
 }

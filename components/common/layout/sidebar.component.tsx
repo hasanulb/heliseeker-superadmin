@@ -52,7 +52,7 @@ export const SECONDARY_MENU = [
     label: "User Management",
     href: "/admin/user-management/users",
     submenu: [
-      { key: "staff-users", icon: UsersRound, label: "Users", href: "/admin/user-management/users" },
+      { key: "staff-users", icon: UsersRound, label: "User List", href: "/admin/user-management/users" },
       { key: "user-roles", icon: ShieldCheck, label: "User Roles", href: "/admin/access" },
     ],
     module: "userManagement",
@@ -114,7 +114,7 @@ export function PrimarySidebar() {
   return (
     <div
       className={cn(
-        "fixed top-0 left-0 h-full bg-card border-r border-border flex flex-col items-center py-4 transition-all duration-200 z-50",
+        "fixed top-0 left-0 h-full bg-card/95 backdrop-blur border-r border-border/70 shadow-sm flex flex-col items-center py-4 transition-all duration-200 z-50",
         isExpanded ? "w-56 px-4" : "w-16"
       )}
       onMouseEnter={() => setHovered(true)}
@@ -122,7 +122,12 @@ export function PrimarySidebar() {
       style={{ zIndex: 50 }}
     >
       {/* Logo and Admin Panel Name */}
-      <div className={cn("flex items-center w-full px-2 mb-8", isExpanded ? "justify-start" : "justify-center")}> 
+      <div
+        className={cn(
+          "flex items-center w-full px-2 py-2 mb-6 rounded-xl bg-muted/40",
+          isExpanded ? "justify-start" : "justify-center"
+        )}
+      >
         <Image src={logo} alt="Logo" width={26} height={26} className="w-8 h-8" />
         {isExpanded && <span className="ml-2 font-bold text-lg whitespace-nowrap">Heli Seeker</span>}
       </div>
@@ -134,14 +139,14 @@ export function PrimarySidebar() {
             key={item.key}
             href={item.href}
             className={cn(
-              "mb-6 flex items-center justify-center w-12 h-12 rounded-lg transition relative group",
-              isActive && "bg-sidebar-hovered text-sidebar-hovered-foreground",
-              isExpanded ? "w-full px-4 justify-start" : "w-12 justify-center",
-              !isActive && "hover:bg-sidebar-hovered hover:text-sidebar-hovered-foreground"
+              "mb-2 flex items-center justify-center w-12 h-11 rounded-xl transition-all duration-200 relative group",
+              isActive && "bg-primary/10 text-primary shadow-sm",
+              isExpanded ? "w-full px-3 justify-start" : "w-12 justify-center",
+              !isActive && "hover:bg-muted/60 hover:text-foreground hover:translate-x-0.5"
             )}
             title={item.label}
           >
-            <item.icon className="w-6 h-6" />
+            <item.icon className="w-5 h-5" />
             {isExpanded && (
               <>
                 <span className="ml-4 text-sm font-medium whitespace-nowrap">{item.label}</span>
@@ -156,7 +161,7 @@ export function PrimarySidebar() {
       })}
 
       <div className={cn("my-3 w-full px-2", !isExpanded && "px-0")}>
-        <div className={cn("h-px w-full bg-border", isExpanded && "mb-2")} />
+        <div className={cn("h-px w-full bg-border/70", isExpanded && "mb-2")} />
         {isExpanded && <div className="px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Masters</div>}
       </div>
 
@@ -168,14 +173,14 @@ export function PrimarySidebar() {
             key={item.key}
             href={item.href}
             className={cn(
-              "mb-6 flex items-center justify-center w-12 h-12 rounded-lg transition relative group",
-              isActive && "bg-sidebar-hovered text-sidebar-hovered-foreground",
-              isExpanded ? "w-full px-4 justify-start" : "w-12 justify-center",
-              !isActive && "hover:bg-sidebar-hovered hover:text-sidebar-hovered-foreground"
+              "mb-2 flex items-center justify-center w-12 h-11 rounded-xl transition-all duration-200 relative group",
+              isActive && "bg-primary/10 text-primary shadow-sm",
+              isExpanded ? "w-full px-3 justify-start" : "w-12 justify-center",
+              !isActive && "hover:bg-muted/60 hover:text-foreground hover:translate-x-0.5"
             )}
             title={item.label}
           >
-            <item.icon className="w-6 h-6" />
+            <item.icon className="w-5 h-5" />
             {isExpanded && (
               <>
                 <span className="ml-4 text-sm font-medium whitespace-nowrap">{item.label}</span>
@@ -190,7 +195,7 @@ export function PrimarySidebar() {
       })}
 
       <div className={cn("my-3 w-full px-2", !isExpanded && "px-0")}>
-        <div className={cn("h-px w-full bg-border", isExpanded && "mb-2")} />
+        <div className={cn("h-px w-full bg-border/70", isExpanded && "mb-2")} />
         {isExpanded && <div className="px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Users</div>}
       </div>
 
@@ -202,14 +207,14 @@ export function PrimarySidebar() {
             <Link
               href={item.href}
               className={cn(
-                "mb-2 flex items-center justify-center h-12 rounded-lg transition relative group",
-                isActive && "bg-sidebar-hovered text-sidebar-hovered-foreground",
-                isExpanded ? "w-full px-4 justify-start" : "w-12 justify-center",
-                !isActive && "hover:bg-sidebar-hovered hover:text-sidebar-hovered-foreground"
+                "mb-2 flex items-center justify-center h-11 rounded-xl transition-all duration-200 relative group",
+                isActive && "bg-primary/10 text-primary shadow-sm",
+                isExpanded ? "w-full px-3 justify-start" : "w-12 justify-center",
+                !isActive && "hover:bg-muted/60 hover:text-foreground hover:translate-x-0.5"
               )}
               title={item.label}
             >
-              <item.icon className="w-6 h-6" />
+              <item.icon className="w-5 h-5" />
               {isExpanded && (
                 <>
                   <span className="ml-4 text-sm font-medium whitespace-nowrap">{item.label}</span>
@@ -222,7 +227,8 @@ export function PrimarySidebar() {
             </Link>
 
             {isExpanded && hasSubmenu && (
-              <div className="mb-4 ml-10 flex flex-col gap-1">
+              <div className="relative mb-4 ml-9 flex flex-col gap-2 pl-4">
+                <div className="absolute left-1 top-1 bottom-1 w-px bg-border/70" />
                 {item.submenu!.map((sub) => {
                   const subActive = pathname.startsWith(sub.href)
                   return (
@@ -230,8 +236,10 @@ export function PrimarySidebar() {
                       key={sub.key}
                       href={sub.href}
                       className={cn(
-                        "rounded px-2 py-1 text-sm transition",
-                        subActive ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"
+                        "rounded-xl px-4 py-2 text-sm transition",
+                        subActive
+                          ? "bg-muted text-foreground font-semibold shadow-sm"
+                          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                       )}
                     >
                       {sub.label}
@@ -247,12 +255,12 @@ export function PrimarySidebar() {
       <button
         onClick={handleLogout}
         className={cn(
-          "mt-auto flex items-center justify-center w-12 h-12 rounded-lg transition relative group text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30",
-          isExpanded ? "w-full px-4 justify-start" : "w-12 justify-center"
+          "mt-auto flex items-center justify-center w-12 h-11 rounded-xl transition-all duration-200 relative group text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30",
+          isExpanded ? "w-full px-3 justify-start" : "w-12 justify-center"
         )}
         title="Log out"
       >
-        <LogOut className="w-6 h-6" />
+        <LogOut className="w-5 h-5" />
         {isExpanded && <span className="ml-4 text-sm font-medium whitespace-nowrap">Log out</span>}
       </button>
     </div>
@@ -274,7 +282,7 @@ export function SecondarySidebar({ selected, secondarySelected, onSecondarySelec
   return (
     <div
       className={cn(
-        "fixed top-0 left-16 h-full bg-background border-r border-border flex flex-col py-8 transition-all duration-200 z-40",
+        "fixed top-0 left-16 h-full bg-background/95 backdrop-blur border-r border-border/70 shadow-sm flex flex-col py-8 transition-all duration-200 z-40",
         isExpanded ? "w-56" : "w-16"
       )}
       onMouseEnter={() => setHovered(true)}
@@ -298,8 +306,8 @@ export function SecondarySidebar({ selected, secondarySelected, onSecondarySelec
             key={sub.key}
             href={sub.href}
             className={cn(
-              "flex items-center rounded px-3 py-2 hover:bg-muted transition",
-              secondarySelected === sub.key && "bg-muted text-primary",
+              "flex items-center rounded-lg px-3 py-2 hover:bg-muted transition",
+              secondarySelected === sub.key && "bg-primary/10 text-primary shadow-sm",
               !isExpanded && "justify-center"
             )}
             onClick={() => onSecondarySelect(sub.key)}

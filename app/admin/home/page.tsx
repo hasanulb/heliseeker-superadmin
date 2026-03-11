@@ -1,6 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 import { useDashboard } from "./_hooks/use-dashboard"
 
@@ -23,7 +24,7 @@ export default function AdminHomePage() {
           <CardHeader>
             <CardTitle className="text-base">Centers Pending</CardTitle>
           </CardHeader>
-          <CardContent className="text-2xl font-semibold">{data.centers.pending}</CardContent>
+          <CardContent className="text-2xl font-semibold">{data.centers.submitted}</CardContent>
         </Card>
         <Card>
           <CardHeader>
@@ -39,19 +40,72 @@ export default function AdminHomePage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Registered Patients</CardTitle>
+            <CardTitle className="text-base">Total Users (Website)</CardTitle>
           </CardHeader>
-          <CardContent className="text-2xl font-semibold">{data.totalPatients}</CardContent>
+          <CardContent className="text-2xl font-semibold">{data.totalUsers}</CardContent>
         </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>SEO Snapshot</CardTitle>
+          <CardTitle>Location Based Centers</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <p><span className="font-medium">Meta Title:</span> {data.seo.metaTitle}</p>
-          <p><span className="font-medium">Meta Description:</span> {data.seo.metaDescription}</p>
+        <CardContent>
+          {data.centersByLocation.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No location data found.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Location</TableHead>
+                  <TableHead className="text-right">Total Centers</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.centersByLocation.map((item) => (
+                  <TableRow key={item.location}>
+                    <TableCell className="font-medium">{item.location}</TableCell>
+                    <TableCell className="text-right">{item.total}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Total Users (Website)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {data.users.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No users found.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Si.no</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Phone Number</TableHead>
+                  <TableHead>Profile Name</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.users.map((user, index) => (
+                  <TableRow key={user.id ?? `${user.email ?? "user"}-${index}`}>
+                    <TableCell className="font-medium">{index + 1}</TableCell>
+                    <TableCell>{user.email || "—"}</TableCell>
+                    <TableCell>{user.phoneNumber || "—"}</TableCell>
+                    <TableCell>{user.profileName || "—"}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+          <p className="mt-3 text-xs text-muted-foreground">
+            Showing the latest {data.users.length} users.
+          </p>
         </CardContent>
       </Card>
     </div>

@@ -1,3 +1,6 @@
+import { Edit, Trash2 } from "lucide-react"
+
+import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { StaffUserRow } from "../_types"
@@ -5,10 +8,20 @@ import { StaffUserRow } from "../_types"
 interface StaffTableProps {
   users: StaffUserRow[]
   onToggleStatus: (id: string, active: boolean) => void
+  onEdit?: (user: StaffUserRow) => void
+  onDelete?: (user: StaffUserRow) => void
   canEdit?: boolean
+  canDelete?: boolean
 }
 
-export function StaffTable({ users, onToggleStatus, canEdit = true }: StaffTableProps) {
+export function StaffTable({
+  users,
+  onToggleStatus,
+  onEdit,
+  onDelete,
+  canEdit = true,
+  canDelete = true,
+}: StaffTableProps) {
   return (
     <Table>
       <TableHeader>
@@ -17,6 +30,7 @@ export function StaffTable({ users, onToggleStatus, canEdit = true }: StaffTable
           <TableHead>Email</TableHead>
           <TableHead>Role</TableHead>
           <TableHead>Status</TableHead>
+          {(onEdit || onDelete) && <TableHead className="text-right">Actions</TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -37,6 +51,34 @@ export function StaffTable({ users, onToggleStatus, canEdit = true }: StaffTable
                 <span>{user.active ? "Active" : "Disabled"}</span>
               </div>
             </TableCell>
+            {(onEdit || onDelete) && (
+              <TableCell className="text-right">
+                <div className="flex justify-end gap-2">
+                  {onEdit && (
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      onClick={() => onEdit(user)}
+                      aria-label="Edit staff user"
+                      disabled={!canEdit}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {onDelete && (
+                    <Button
+                      size="icon"
+                      variant="destructive"
+                      onClick={() => onDelete(user)}
+                      aria-label="Delete staff user"
+                      disabled={!canDelete}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </TableCell>
+            )}
           </TableRow>
         ))}
       </TableBody>

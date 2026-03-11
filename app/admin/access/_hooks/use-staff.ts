@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
-import { getApi, patchApi, postApi } from "@/lib/admin-panel/client"
+import { deleteApi, getApi, patchApi, postApi } from "@/lib/admin-panel/client"
 
-import { CreateStaffPayload, CreateStaffResponse, StaffResponse } from "../_types"
+import { CreateStaffPayload, CreateStaffResponse, StaffResponse, UpdateStaffPayload } from "../_types"
 
 export function useStaffUsers() {
   return useQuery({
@@ -22,7 +22,15 @@ export function useCreateStaffUser() {
 export function useUpdateStaffUser() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, active }: { id: string; active: boolean }) => patchApi(`/api/admin/staff/${id}`, { active }),
+    mutationFn: (payload: UpdateStaffPayload) => patchApi(`/api/admin/staff/${payload.id}`, payload),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-staff"] }),
+  })
+}
+
+export function useDeleteStaffUser() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id }: { id: string }) => deleteApi(`/api/admin/staff/${id}`, { id }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-staff"] }),
   })
 }

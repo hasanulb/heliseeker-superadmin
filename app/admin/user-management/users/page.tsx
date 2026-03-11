@@ -1,21 +1,23 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useEffect } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useForm } from "react-hook-form"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 
 import { StaffTable } from "@/app/admin/access/_components/staff-table"
-import { useCreateStaffUser, useStaffUsers, useUpdateStaffUser } from "@/app/admin/access/_hooks/use-staff"
+import { useCreateStaffUser, useDeleteStaffUser, useStaffUsers, useUpdateStaffUser } from "@/app/admin/access/_hooks/use-staff"
 import { useRoles } from "@/app/admin/access/_hooks/use-roles"
 import { createStaffSchema, CreateStaffFormValues } from "@/app/admin/access/_schemas/staff.schema"
 import { useRequirePermission } from "@/app/admin/access/_hooks/use-access"
+import { StaffUserRow } from "@/app/admin/access/_types"
 
 export default function StaffUsersPage() {
   const access = useRequirePermission("userManagement", "view")
@@ -24,7 +26,13 @@ export default function StaffUsersPage() {
   const { data: rolesData, isLoading: rolesLoading } = useRoles()
   const createMutation = useCreateStaffUser()
   const updateMutation = useUpdateStaffUser()
+  const deleteMutation = useDeleteStaffUser()
   const roles = rolesData?.data || []
+  const [search, setSearch] = useState("")
+  const [editingUser, setEditingUser] = useState<StaffUserRow | null>(null)
+  const [editName, setEditName] = useState("")
+  const [editEmail, setEditEmail] = useState("")
+  const [editRole, setEditRole] = useState("")
 
   const form = useForm<CreateStaffFormValues>({
     resolver: zodResolver(createStaffSchema),
@@ -47,6 +55,18 @@ export default function StaffUsersPage() {
   if (!access.isReady) {
     return <p className="text-sm text-muted-foreground">Loading...</p>
   }
+
+  const canEdit = access.can("userManagement", "edit")
+  const staffUsers = data?.data || []
+  const filteredUsers = useMemo(() => {
+    const term = search.trim().toLowerCase()
+    if (!term) return staffUsers
+    return staffUsers.filter((user) =>
+      [user.name, user.email, user.role]
+        .filter(Boolean)
+        .some((value) => value!.toLowerCase().includes(term)),
+    )
+  }, [search, staffUsers])
 
   return (
     <div className="space-y-6">
@@ -107,7 +127,10 @@ export default function StaffUsersPage() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input
+                          {...field}
+                          onChange={(event) => field.onChange(event.target.value.toLowerCase())}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -151,17 +174,125 @@ export default function StaffUsersPage() {
           <CardTitle>Staff Users</CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="mb-4">
+            <Input
+              placeholder="Search staff by name, email, or role"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </div>
           {isLoading ? (
             <p className="text-sm text-muted-foreground">Loading staff users...</p>
           ) : (
             <StaffTable
-              users={data?.data || []}
-              canEdit={access.can("userManagement", "edit")}
+              users={filteredUsers}
+              canEdit={canEdit}
+              canDelete={canEdit}
               onToggleStatus={(id, active) => updateMutation.mutate({ id, active })}
+              onEdit={(user) => {
+                setEditingUser(user)
+                setEditName(user.name || "")
+                setEditEmail(user.email || "")
+                setEditRole(user.role || roles[0]?.name || "")
+              }}
+              onDelete={async (user) => {
+                if (!canEdit) return
+                if (!window.confirm("Delete this staff user? This cannot be undone.")) return
+                try {
+                  await deleteMutation.mutateAsync({ id: user.id })
+                  toast({ title: "Deleted", description: "Staff user deleted", variant: "success" })
+                } catch (err: any) {
+                  toast({
+                    title: "Error",
+                    description: err?.message || "Failed to delete staff user",
+                    variant: "destructive",
+                  })
+                }
+              }}
             />
           )}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={Boolean(editingUser)}
+        onOpenChange={(open) => {
+          if (!open) setEditingUser(null)
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Staff User</DialogTitle>
+            <DialogDescription>Update the staff user details.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Name</label>
+              <Input value={editName} onChange={(event) => setEditName(event.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Email</label>
+              <Input value={editEmail} onChange={(event) => setEditEmail(event.target.value.toLowerCase())} />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Role</label>
+              <Select value={editRole} onValueChange={setEditRole} disabled={rolesLoading || roles.length === 0}>
+                <SelectTrigger>
+                  <SelectValue placeholder={rolesLoading ? "Loading roles..." : "Select role"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {roles.map((role) => (
+                    <SelectItem key={role.id} value={role.name}>
+                      {role.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setEditingUser(null)}
+              disabled={updateMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={async () => {
+                if (!editingUser) return
+                try {
+                  await updateMutation.mutateAsync({
+                    id: editingUser.id,
+                    name: editName.trim(),
+                    email: editEmail.trim(),
+                    role: editRole,
+                  })
+                  setEditingUser(null)
+                  toast({ title: "Updated", description: "Staff user updated", variant: "success" })
+                } catch (err: any) {
+                  toast({
+                    title: "Error",
+                    description: err?.message || "Failed to update staff user",
+                    variant: "destructive",
+                  })
+                }
+              }}
+              disabled={
+                updateMutation.isPending ||
+                !canEdit ||
+                !editName.trim() ||
+                !editEmail.trim() ||
+                !editRole
+              }
+            >
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

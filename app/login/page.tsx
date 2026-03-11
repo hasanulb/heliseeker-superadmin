@@ -1,6 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
+import { useEffect } from "react"
 import { useTheme } from "next-themes"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -13,6 +14,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import { useTRPC } from "@/trpc/client"
+import { createClient } from "@/utils/supabase/client"
 
 const formSchema = z.object({
     email: z.string().email(),
@@ -26,6 +28,22 @@ export default function LoginPage() {
     const { theme, setTheme } = useTheme()
     const { toast } = useToast()
     const trpc = useTRPC()
+
+    useEffect(() => {
+        let active = true
+        const supabase = createClient()
+        const checkSession = async () => {
+            const { data } = await supabase.auth.getUser()
+            if (!active) return
+            if (data?.user) {
+                router.replace("/admin/home")
+            }
+        }
+        checkSession()
+        return () => {
+            active = false
+        }
+    }, [router])
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -49,7 +67,7 @@ export default function LoginPage() {
                     variant: "success",
                 })
                 form.reset()
-                router.push(mustChangePassword ? "/admin/change-password" : "/admin")
+                router.replace(mustChangePassword ? "/admin/change-password" : "/admin/home")
                 router.refresh()
             },
             onError: (error) => {

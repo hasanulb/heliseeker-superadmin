@@ -3,6 +3,8 @@ export interface UserItem {
   name: string
   email: string
   isVerified: boolean
+  isActive: boolean
+  userType?: string
   createdAt?: string
 }
 
@@ -18,4 +20,12 @@ export interface CreateUserPayload {
 export interface CreateUserResponse {
   data: UserItem
   tempPassword: string
+}
+
+export interface UpdateUserPayload {
+  id: string
+  name?: string
+  email?: string
+  isVerified?: boolean
+  isActive?: boolean
 }

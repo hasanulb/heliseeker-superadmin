@@ -25,11 +25,25 @@ export interface CreateStaffResponse {
   tempPassword: string
 }
 
+export interface UpdateStaffPayload {
+  id: string
+  name?: string
+  email?: string
+  role?: string
+  active?: boolean
+}
+
 export interface RoleResponse {
   data: Role[]
 }
 
 export interface CreateRolePayload {
+  name: string
+  permissions: StaffPermission[]
+}
+
+export interface UpdateRolePayload {
+  id: string
   name: string
   permissions: StaffPermission[]
 }

@@ -3,8 +3,19 @@ export interface DashboardResponse {
     pending: number
     active: number
     rejected: number
+    submitted: number
   }
-  totalPatients: number
+  centersByLocation: {
+    location: string
+    total: number
+  }[]
+  totalUsers: number
+  users: {
+    id: string
+    email?: string | null
+    phoneNumber?: string | null
+    profileName?: string | null
+  }[]
   seo: {
     metaTitle: string
     metaDescription: string

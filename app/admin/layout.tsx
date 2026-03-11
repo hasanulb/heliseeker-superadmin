@@ -1,11 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { usePathname } from "next/navigation"
 
 import { Header, MobileSidebar, SearchModal, SecondarySidebar, PrimarySidebar, MAIN_MENU, getDefaultSubmenuKey } from "@/components/common"
 import { ProfileProvider } from "@/app/contexts/profile.context"
 import { createClient } from "@/utils/supabase/client"
+import { AuthService } from "@/services/api/auth.service"
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -14,6 +15,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [secondaryCollapsed, setSecondaryCollapsed] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastActivityRef = useRef<number>(Date.now())
+
+  const INACTIVITY_LIMIT_MS = 30 * 60 * 1000
 
   // Prevent background scroll when mobile sidebar is open
   useEffect(() => {
@@ -64,6 +69,65 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
     enforcePasswordChange()
   }, [pathname])
+
+  useEffect(() => {
+    const supabase = createClient()
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getUser()
+      if (!data?.user) {
+        window.location.href = "/login"
+      }
+    }
+
+    const handleIdleLogout = async () => {
+      const now = Date.now()
+      if (now - lastActivityRef.current < INACTIVITY_LIMIT_MS - 1000) {
+        resetInactivityTimer()
+        return
+      }
+      try {
+        await new AuthService().logout()
+      } finally {
+        window.location.href = "/login"
+      }
+    }
+
+    const resetInactivityTimer = () => {
+      lastActivityRef.current = Date.now()
+      if (idleTimerRef.current) {
+        clearTimeout(idleTimerRef.current)
+      }
+      idleTimerRef.current = setTimeout(handleIdleLogout, INACTIVITY_LIMIT_MS)
+    }
+
+    const onActivity = () => resetInactivityTimer()
+
+    const events: Array<keyof WindowEventMap> = [
+      "mousemove",
+      "mousedown",
+      "keydown",
+      "scroll",
+      "touchstart",
+    ]
+
+    events.forEach((event) => window.addEventListener(event, onActivity, { passive: true }))
+    resetInactivityTimer()
+    checkSession()
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT") {
+        window.location.href = "/login"
+      }
+    })
+
+    return () => {
+      events.forEach((event) => window.removeEventListener(event, onActivity))
+      if (idleTimerRef.current) {
+        clearTimeout(idleTimerRef.current)
+      }
+      authListener.subscription.unsubscribe()
+    }
+  }, [])
 
   useEffect(() => {
     setRouteChanging(true)

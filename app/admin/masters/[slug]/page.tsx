@@ -10,12 +10,14 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command"
+import { cn } from "@/lib/utils"
+import { Check, ChevronsUpDown, Loader2 } from "lucide-react"
 
 import { useCreateMasterItem, useDeleteMasterItem, useMasterItems, useUpdateMasterItem } from "../_hooks/use-masters"
 import { MasterTable } from "../_components/master-table"
 import { useToast } from "@/hooks/use-toast"
-import { createClient } from "@/utils/supabase/client"
 import { useRequirePermission } from "@/app/admin/access/_hooks/use-access"
 
 const masterConfig = {
@@ -52,6 +54,73 @@ const masterItemSchema = z.object({
 
 type MasterFormValues = z.infer<typeof masterItemSchema>
 
+type SearchableOption = {
+  value: string
+  label: string
+}
+
+function SearchableSelect({
+  value,
+  onChange,
+  options,
+  placeholder,
+  searchPlaceholder,
+  emptyMessage,
+  disabled,
+}: {
+  value: string
+  onChange: (value: string) => void
+  options: SearchableOption[]
+  placeholder: string
+  searchPlaceholder: string
+  emptyMessage: string
+  disabled?: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const selected = options.find((option) => option.value === value)
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between"
+          disabled={disabled}
+        >
+          {selected?.label || placeholder}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+        <Command>
+          <CommandInput placeholder={searchPlaceholder} />
+          <CommandEmpty>{emptyMessage}</CommandEmpty>
+          <CommandGroup>
+            {options.map((option) => (
+              <CommandItem
+                key={option.value}
+                value={option.label}
+                onSelect={() => {
+                  onChange(option.value)
+                  setOpen(false)
+                }}
+              >
+                <Check
+                  className={cn("mr-2 h-4 w-4", value === option.value ? "opacity-100" : "opacity-0")}
+                />
+                {option.label}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 export default function MasterPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params)
   const router = useRouter()
@@ -64,6 +133,7 @@ export default function MasterPage({ params }: { params: Promise<{ slug: string 
   const createMutation = useCreateMasterItem(slug)
   const updateMutation = useUpdateMasterItem(slug)
   const deleteMutation = useDeleteMasterItem(slug)
+  const isSaving = createMutation.isPending || updateMutation.isPending
 
   const departmentQuery = useMasterItems("departments")
   const ageGroupQuery = useMasterItems("age-groups")
@@ -87,27 +157,6 @@ export default function MasterPage({ params }: { params: Promise<{ slug: string 
   if (!access.isReady) {
     return <p className="text-sm text-muted-foreground">Loading...</p>
   }
-
-  useEffect(() => {
-    let active = true
-    const checkSession = async () => {
-      const supabase = createClient()
-      const { data, error } = await supabase.auth.getUser()
-      if (!active) return
-      if (error || !data?.user) {
-        toast({
-          title: "Session expired",
-          description: "Please log in again.",
-          variant: "destructive",
-        })
-        router.push("/login")
-      }
-    }
-    checkSession()
-    return () => {
-      active = false
-    }
-  }, [router, toast])
 
   const entityLabel = config?.title?.endsWith("s")
     ? config.title.slice(0, -1)
@@ -261,20 +310,20 @@ export default function MasterPage({ params }: { params: Promise<{ slug: string 
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Department</FormLabel>
-                      <Select value={field.value || ""} onValueChange={field.onChange}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select department" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {(departmentQuery.data?.data || []).map((item) => (
-                            <SelectItem key={item.id} value={item.id}>
-                              {item.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <SearchableSelect
+                          value={field.value || ""}
+                          onChange={field.onChange}
+                          options={(departmentQuery.data?.data || []).map((item) => ({
+                            value: item.id,
+                            label: item.name,
+                          }))}
+                          placeholder="Select department"
+                          searchPlaceholder="Search department..."
+                          emptyMessage="No departments found."
+                          disabled={departmentQuery.isLoading}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -304,21 +353,23 @@ export default function MasterPage({ params }: { params: Promise<{ slug: string 
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Age Group (Optional)</FormLabel>
-                      <Select value={field.value || "none"} onValueChange={field.onChange}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select age group" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="none">No age group</SelectItem>
-                          {(ageGroupQuery.data?.data || []).map((item) => (
-                            <SelectItem key={item.id} value={item.id}>
-                              {item.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <SearchableSelect
+                          value={field.value || "none"}
+                          onChange={field.onChange}
+                          options={[
+                            { value: "none", label: "No age group" },
+                            ...(ageGroupQuery.data?.data || []).map((item) => ({
+                              value: item.id,
+                              label: item.name,
+                            })),
+                          ]}
+                          placeholder="Select age group"
+                          searchPlaceholder="Search age group..."
+                          emptyMessage="No age groups found."
+                          disabled={ageGroupQuery.isLoading}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -326,7 +377,8 @@ export default function MasterPage({ params }: { params: Promise<{ slug: string 
               )}
 
               <div className="flex items-center gap-2 md:col-span-2">
-                <Button type="submit">
+                <Button type="submit" disabled={isSaving}>
+                  {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {editingId ? "Update" : "Create"}
                 </Button>
                 {editingId && (
@@ -355,6 +407,8 @@ export default function MasterPage({ params }: { params: Promise<{ slug: string 
           </div>
           {isLoading ? (
             <p className="text-sm text-muted-foreground">Loading {config.title.toLowerCase()}...</p>
+          ) : slug === "age-groups" && filteredItems.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No age groups found.</p>
           ) : (
             <MasterTable
               items={filteredItems}

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 
 import { CentersTable } from "./_components/centers-table"
-import { useCenters, useDeleteCenter, useUpdateCenterStatus } from "./_hooks/use-centers"
+import { useCenters, useUpdateCenterStatus } from "./_hooks/use-centers"
 import { CenterApprovalStatus } from "./_types"
 
 export default function CentersPage() {
@@ -29,8 +29,6 @@ export default function CentersPage() {
   const visibleCenters = statusFilter === "pending" ? pendingCenters : completedCenters
 
   const updateStatusMutation = useUpdateCenterStatus()
-  const deleteCenterMutation = useDeleteCenter()
-
   const handleUpdateStatus = async (id: string, status: CenterApprovalStatus) => {
     setUpdatingCenterId(id)
     setUpdatingStatus(status)
@@ -122,16 +120,6 @@ export default function CentersPage() {
                   showStatusSelect={statusFilter === "completed"}
                   updatingCenterId={updatingCenterId}
                   updatingStatus={updatingStatus}
-                  onDelete={
-                    statusFilter === "completed"
-                      ? (id) => {
-                          if (window.confirm("Delete this center? This cannot be undone.")) {
-                            deleteCenterMutation.mutate({ id })
-                          }
-                        }
-                      : undefined
-                  }
-                  showDelete={statusFilter === "completed"}
                 />
               )}
             </div>

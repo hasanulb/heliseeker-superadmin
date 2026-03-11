@@ -9,9 +9,9 @@ export async function GET(request: NextRequest) {
   const supabase = await getServerSupabase()
 
   const { data, error } = await supabase
-    .from("users")
-    .select("id, email, user_type, is_verified, created_at, customer_profiles(guardian_name, child_name)")
-    .eq("user_type", "customer")
+    .from("customer_profiles")
+    .select("user_id, guardian_name, child_name, is_active, created_at, users(id, email, user_type, is_verified, created_at)")
+    .eq("users.user_type", "customer")
     .order("created_at", { ascending: false })
 
   if (error) {
@@ -19,14 +19,16 @@ export async function GET(request: NextRequest) {
   }
 
   const normalized = (data || []).map((item) => {
-    const profile = Array.isArray(item.customer_profiles) ? item.customer_profiles[0] : item.customer_profiles
-    const name = profile?.guardian_name || profile?.child_name || item.email || "Customer"
+    const user = Array.isArray(item.users) ? item.users[0] : item.users
+    const name = item.guardian_name || item.child_name || user?.email || "Customer"
     return {
-      id: item.id,
+      id: user?.id || item.user_id,
       name,
-      email: item.email,
-      isVerified: item.is_verified,
-      createdAt: item.created_at,
+      email: user?.email,
+      isVerified: user?.is_verified ?? false,
+      isActive: item.is_active ?? true,
+      userType: user?.user_type,
+      createdAt: user?.created_at || item.created_at,
     }
   })
 
@@ -85,9 +87,10 @@ export async function POST(request: NextRequest) {
 
   const { error: profileError } = await adminSupabase.from("customer_profiles").insert([
     {
-      auth_user_id: userRow.id,
+      auth_user_id: authUserId,
       user_id: userRow.id,
       guardian_name: name,
+      is_active: true,
     },
   ])
   if (profileError) {

@@ -1,13 +1,17 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
+import { useMemo } from "react"
 import { useForm } from "react-hook-form"
+import dynamic from "next/dynamic"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+import "react-quill-new/dist/quill.snow.css"
+
+const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false })
 
 import { FlatPagesTable } from "./_components/flat-pages-table"
 import { useCreateFlatPage, useFlatPages, useUpdateFlatPage } from "./_hooks/use-flat-pages"
@@ -26,6 +30,38 @@ export default function FlatPagesPage() {
       description: "",
     },
   })
+
+  const quillModules = useMemo(
+    () => ({
+      toolbar: [
+        [{ header: [1, 2, 3, false] }],
+        ["bold", "italic", "underline", "strike"],
+        [{ color: [] }, { background: [] }],
+        [{ list: "ordered" }, { list: "bullet" }],
+        ["blockquote", "code-block"],
+        ["link", "clean"],
+      ],
+    }),
+    [],
+  )
+
+  const quillFormats = useMemo(
+    () => [
+      "header",
+      "bold",
+      "italic",
+      "underline",
+      "strike",
+      "color",
+      "background",
+      "list",
+      "bullet",
+      "blockquote",
+      "code-block",
+      "link",
+    ],
+    [],
+  )
 
   return (
     <div className="space-y-6">
@@ -83,7 +119,16 @@ export default function FlatPagesPage() {
                   <FormItem>
                     <FormLabel>Description (Rich Text)</FormLabel>
                     <FormControl>
-                      <Textarea rows={5} {...field} />
+                      <div className="rounded-md border border-input bg-background [&_.ql-container]:rounded-b-md [&_.ql-toolbar]:rounded-t-md [&_.ql-editor]:min-h-[200px] [&_.ql-editor]:text-black">
+                        <ReactQuill
+                          theme="snow"
+                          value={field.value || ""}
+                          onChange={field.onChange}
+                          modules={quillModules}
+                          formats={quillFormats}
+                          placeholder="Write page content..."
+                        />
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>

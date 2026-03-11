@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
-import { getApi, patchApi, postApi } from "@/lib/admin-panel/client"
+import { deleteApi, getApi, patchApi, postApi } from "@/lib/admin-panel/client"
 
-import { CreateUserPayload, CreateUserResponse, UsersResponse } from "../_types"
+import { CreateUserPayload, CreateUserResponse, UpdateUserPayload, UsersResponse } from "../_types"
 
 export function useUsers(query: string) {
   return useQuery({
@@ -24,11 +24,46 @@ export function useToggleUserVerification() {
   })
 }
 
+export function useToggleUserActive() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      patchApi(`/api/admin/users/${id}`, { isActive }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+      queryClient.invalidateQueries({ queryKey: ["admin-dashboard"] })
+    },
+  })
+}
+
 export function useCreateUser() {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: (payload: CreateUserPayload) => postApi<CreateUserResponse>("/api/admin/users", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+    },
+  })
+}
+
+export function useUpdateUser() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (payload: UpdateUserPayload) => patchApi(`/api/admin/users/${payload.id}`, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+    },
+  })
+}
+
+export function useDeleteUser() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id }: { id: string }) => deleteApi(`/api/admin/users/${id}`, { id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] })
     },

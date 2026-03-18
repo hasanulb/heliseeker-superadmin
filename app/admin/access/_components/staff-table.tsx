@@ -48,7 +48,7 @@ export function StaffTable({
                     if (canEdit) onToggleStatus(user.id, checked)
                   }}
                 />
-                <span>{user.active ? "Active" : "Disabled"}</span>
+                <span>{user.active ? "Active" : "Inactive"}</span>
               </div>
             </TableCell>
             {(onEdit || onDelete) && (

@@ -3,7 +3,6 @@ import nodemailer from "nodemailer"
 
 import { getServerSupabase } from "@/app/api/_lib/supabase"
 import { getServiceRoleSupabase } from "@/app/api/_lib/supabase-admin"
-import { log } from "console"
 
 export async function GET() {
   const supabase = await getServerSupabase()
@@ -39,10 +38,31 @@ export async function POST(request: NextRequest) {
 
     const name = payload.name?.trim()
     const email = payload.email?.trim().toLowerCase()
-    const role = payload.role?.trim()
+    let role = payload.role?.trim()
 
     if (!name || !email || !role) {
       return NextResponse.json({ message: "Name, email and role are required" }, { status: 400 })
+    }
+
+    const supabase = getServiceRoleSupabase()
+
+    if (role !== "super_admin") {
+      const { data: roleRow, error: roleError } = await supabase
+        .from("roles")
+        .select("name")
+        .ilike("name", role)
+        .limit(1)
+        .maybeSingle()
+
+      if (roleError) {
+        return NextResponse.json({ message: roleError.message }, { status: 500 })
+      }
+
+      if (!roleRow?.name) {
+        return NextResponse.json({ message: "Invalid role. Create the role first." }, { status: 400 })
+      }
+
+      role = roleRow.name
     }
 
     const smtpHost = process.env.SMTP_HOST
@@ -60,7 +80,6 @@ export async function POST(request: NextRequest) {
     }
 
     const tempPassword = `Temp@${crypto.randomUUID().slice(0, 12)}`
-    const supabase = getServiceRoleSupabase()
 
     const { data: created, error: createError } = await supabase.auth.admin.createUser({
       email,

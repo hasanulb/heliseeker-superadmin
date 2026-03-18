@@ -14,6 +14,7 @@ import {
   Package,
   LogOut,
   Languages,
+  Inbox,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -38,6 +39,7 @@ export const MASTER_MENU = [
 ]
 
 export const SECONDARY_MENU = [
+  { key: "leads", icon: Inbox, label: "Leads", href: "/admin/leads", submenu: null, module: "leads" },
   {
     key: "customers",
     icon: UsersRound,

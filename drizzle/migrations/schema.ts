@@ -1,7 +1,7 @@
 import { pgTable, foreignKey, unique, pgPolicy, uuid, text, timestamp, boolean, index, date, uniqueIndex, check, integer, jsonb, varchar, primaryKey, pgEnum } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
-export const centerApprovalStatus = pgEnum("center_approval_status", ['pending', 'active', 'deactive', 'rejected', 'blacklisted'])
+export const centerApprovalStatus = pgEnum("center_approval_status", ['pending', 'active', 'deactive', 'rejected', 'blacklisted', 'submitted'])
 export const departmentStatus = pgEnum("department_status", ['active', 'inactive'])
 export const referralRequestStatus = pgEnum("referral_request_status", ['pending', 'approved', 'rejected'])
 export const userType = pgEnum("user_type", ['customer', 'center', 'admin'])
@@ -14,6 +14,7 @@ export const users = pgTable("users", {
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow(),
 	userType: userType("user_type").default('customer').notNull(),
 	isVerified: boolean("is_verified").default(false).notNull(),
+	isSocialSignin: boolean("is_social_signin").default(false).notNull(),
 }, (table) => [
 	foreignKey({
 			columns: [table.authUserId],
@@ -40,40 +41,6 @@ export const termsAndConditions = pgTable("terms_and_conditions", {
 			name: "terms_and_conditions_auth_user_id_fkey"
 		}).onDelete("cascade"),
 	pgPolicy("terms_and_conditions_manage_own", { as: "permissive", for: "all", to: ["authenticated"], using: sql`(auth.uid() = auth_user_id)`, withCheck: sql`(auth.uid() = auth_user_id)`  }),
-]);
-
-export const services = pgTable("services", {
-	id: uuid().defaultRandom().primaryKey().notNull(),
-	serviceName: text("service_name").notNull(),
-	description: text(),
-	departmentId: uuid("department_id").notNull(),
-	ageGroupId: uuid("age_group_id"),
-	expiryDate: date("expiry_date"),
-	status: text().default('active').notNull(),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
-	authUserId: uuid("auth_user_id"),
-}, (table) => [
-	index("idx_services_auth_user_id").using("btree", table.authUserId.asc().nullsLast().op("uuid_ops")),
-	uniqueIndex("services_auth_user_id_service_name_key").using("btree", table.authUserId.asc().nullsLast().op("text_ops"), table.serviceName.asc().nullsLast().op("text_ops")),
-	foreignKey({
-			columns: [table.ageGroupId],
-			foreignColumns: [ageGroups.id],
-			name: "fk_age_group"
-		}).onDelete("set null"),
-	foreignKey({
-			columns: [table.departmentId],
-			foreignColumns: [departments.id],
-			name: "fk_department"
-		}).onDelete("restrict"),
-	foreignKey({
-			columns: [table.authUserId],
-			foreignColumns: [users.id],
-			name: "services_auth_user_id_fkey"
-		}).onDelete("cascade"),
-	pgPolicy("Public can view active services", { as: "permissive", for: "select", to: ["anon", "authenticated"], using: sql`(lower(status) = 'active'::text)` }),
-	pgPolicy("services_manage_own", { as: "permissive", for: "all", to: ["authenticated"] }),
-	check("services_status_check", sql`status = ANY (ARRAY['active'::text, 'inactive'::text])`),
 ]);
 
 export const specialists = pgTable("specialists", {
@@ -126,6 +93,25 @@ export const specialistLanguages = pgTable("specialist_languages", {
   WHERE ((s.id = specialist_languages.specialist_id) AND (s.created_by = auth.uid()))))`  }),
 ]);
 
+export const centerWorkingHours = pgTable("center_working_hours", {
+	id: uuid().defaultRandom().primaryKey().notNull(),
+	authUserId: uuid("auth_user_id").notNull(),
+	dayName: text("day_name").notNull(),
+	shiftIndex: integer("shift_index").notNull(),
+	startTime: text("start_time"),
+	endTime: text("end_time"),
+	notWorking: boolean("not_working").default(false).notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	index("idx_center_working_hours_auth_user_id").using("btree", table.authUserId.asc().nullsLast().op("uuid_ops")),
+	index("idx_center_working_hours_day_name").using("btree", table.dayName.asc().nullsLast().op("text_ops")),
+	unique("center_working_hours_auth_user_id_day_name_shift_index_key").on(table.authUserId, table.dayName, table.shiftIndex),
+	pgPolicy("center_working_hours_manage_own", { as: "permissive", for: "all", to: ["authenticated"], using: sql`(auth.uid() = auth_user_id)`, withCheck: sql`(auth.uid() = auth_user_id)`  }),
+	check("center_working_hours_day_name_check", sql`day_name = ANY (ARRAY['Sunday'::text, 'Monday'::text, 'Tuesday'::text, 'Wednesday'::text, 'Thursday'::text, 'Friday'::text, 'Saturday'::text])`),
+	check("center_working_hours_shift_index_check", sql`(shift_index >= 0) AND (shift_index <= 2)`),
+]);
+
 export const specializations = pgTable("specializations", {
 	id: uuid().defaultRandom().primaryKey().notNull(),
 	name: text().notNull(),
@@ -140,6 +126,41 @@ export const specializations = pgTable("specializations", {
 			name: "specializations_auth_user_id_fkey"
 		}).onDelete("cascade"),
 	pgPolicy("specializations_manage_own", { as: "permissive", for: "all", to: ["authenticated"], using: sql`(auth.uid() = auth_user_id)`, withCheck: sql`(auth.uid() = auth_user_id)`  }),
+]);
+
+export const leads = pgTable("leads", {
+	id: uuid().defaultRandom().primaryKey().notNull(),
+	firstName: text("first_name").notNull(),
+	lastName: text("last_name").notNull(),
+	email: text().notNull(),
+	phone: text(),
+	message: text(),
+	source: text(),
+	pageUrl: text("page_url"),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+});
+
+export const specialistExperiences = pgTable("specialist_experiences", {
+	id: uuid().defaultRandom().primaryKey().notNull(),
+	specialistId: uuid("specialist_id").notNull(),
+	title: text().notNull(),
+	organization: text().notNull(),
+	fromDate: date("from_date").notNull(),
+	toDate: date("to_date"),
+	certificates: jsonb().default([]).notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	index("specialist_experiences_specialist_id_idx").using("btree", table.specialistId.asc().nullsLast().op("uuid_ops")),
+	foreignKey({
+			columns: [table.specialistId],
+			foreignColumns: [specialists.id],
+			name: "specialist_experiences_specialist_id_fkey"
+		}).onDelete("cascade"),
+	pgPolicy("specialist_experiences_manage_own", { as: "permissive", for: "all", to: ["authenticated"], using: sql`(EXISTS ( SELECT 1
+   FROM specialists s
+  WHERE ((s.id = specialist_experiences.specialist_id) AND (s.created_by = auth.uid()))))`, withCheck: sql`(EXISTS ( SELECT 1
+   FROM specialists s
+  WHERE ((s.id = specialist_experiences.specialist_id) AND (s.created_by = auth.uid()))))`  }),
 ]);
 
 export const centerSettings = pgTable("center_settings", {
@@ -175,27 +196,6 @@ export const centerSettings = pgTable("center_settings", {
 	pgPolicy("Public can view center settings", { as: "permissive", for: "select", to: ["anon", "authenticated"] }),
 ]);
 
-export const specialistEducations = pgTable("specialist_educations", {
-	id: uuid().defaultRandom().primaryKey().notNull(),
-	specialistId: uuid("specialist_id"),
-	degree: text().notNull(),
-	university: text().notNull(),
-	fromDate: date("from_date").notNull(),
-	toDate: date("to_date"),
-	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow(),
-}, (table) => [
-	foreignKey({
-			columns: [table.specialistId],
-			foreignColumns: [specialists.id],
-			name: "specialist_education_specialist_id_fkey"
-		}).onDelete("cascade"),
-	pgPolicy("specialist_educations_manage_own", { as: "permissive", for: "all", to: ["authenticated"], using: sql`(EXISTS ( SELECT 1
-   FROM specialists s
-  WHERE ((s.id = specialist_educations.specialist_id) AND (s.created_by = auth.uid()))))`, withCheck: sql`(EXISTS ( SELECT 1
-   FROM specialists s
-  WHERE ((s.id = specialist_educations.specialist_id) AND (s.created_by = auth.uid()))))`  }),
-]);
-
 export const admins = pgTable("admins", {
 	adminId: uuid("admin_id").defaultRandom().primaryKey().notNull(),
 	authUserId: uuid("auth_user_id"),
@@ -209,6 +209,89 @@ export const admins = pgTable("admins", {
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 }, (table) => [
 	unique("admins_email_unique").on(table.email),
+]);
+
+export const roles = pgTable("roles", {
+	roleId: uuid("role_id").defaultRandom().primaryKey().notNull(),
+	name: varchar({ length: 100 }).notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	unique("roles_name_key").on(table.name),
+]);
+
+export const rolePermissionsLegacy = pgTable("role_permissions_legacy", {
+	permissionId: uuid("permission_id").defaultRandom().primaryKey().notNull(),
+	roleId: uuid("role_id").notNull(),
+	module: text().notNull(),
+	canView: boolean("can_view").default(false).notNull(),
+	canCreate: boolean("can_create").default(false).notNull(),
+	canEdit: boolean("can_edit").default(false).notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	foreignKey({
+			columns: [table.roleId],
+			foreignColumns: [roles.roleId],
+			name: "role_permissions_role_id_fkey"
+		}).onDelete("cascade"),
+	unique("role_permissions_role_module_unique").on(table.roleId, table.module),
+]);
+
+export const specialistEducations = pgTable("specialist_educations", {
+	id: uuid().defaultRandom().primaryKey().notNull(),
+	specialistId: uuid("specialist_id"),
+	degree: text().notNull(),
+	university: text().notNull(),
+	fromDate: date("from_date").notNull(),
+	toDate: date("to_date"),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow(),
+	certificates: jsonb().default([]).notNull(),
+}, (table) => [
+	foreignKey({
+			columns: [table.specialistId],
+			foreignColumns: [specialists.id],
+			name: "specialist_education_specialist_id_fkey"
+		}).onDelete("cascade"),
+	pgPolicy("specialist_educations_manage_own", { as: "permissive", for: "all", to: ["authenticated"], using: sql`(EXISTS ( SELECT 1
+   FROM specialists s
+  WHERE ((s.id = specialist_educations.specialist_id) AND (s.created_by = auth.uid()))))`, withCheck: sql`(EXISTS ( SELECT 1
+   FROM specialists s
+  WHERE ((s.id = specialist_educations.specialist_id) AND (s.created_by = auth.uid()))))`  }),
+]);
+
+export const services = pgTable("services", {
+	id: uuid().defaultRandom().primaryKey().notNull(),
+	serviceName: text("service_name").notNull(),
+	description: text(),
+	departmentId: uuid("department_id").notNull(),
+	ageGroupId: uuid("age_group_id"),
+	expiryDate: date("expiry_date"),
+	status: text().default('active').notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+	authUserId: uuid("auth_user_id"),
+}, (table) => [
+	index("idx_services_auth_user_id").using("btree", table.authUserId.asc().nullsLast().op("uuid_ops")),
+	uniqueIndex("services_auth_user_id_service_name_key").using("btree", table.authUserId.asc().nullsLast().op("text_ops"), table.serviceName.asc().nullsLast().op("text_ops")),
+	foreignKey({
+			columns: [table.ageGroupId],
+			foreignColumns: [ageGroups.id],
+			name: "fk_age_group"
+		}).onDelete("set null"),
+	foreignKey({
+			columns: [table.departmentId],
+			foreignColumns: [departments.id],
+			name: "fk_department"
+		}).onDelete("restrict"),
+	foreignKey({
+			columns: [table.authUserId],
+			foreignColumns: [users.id],
+			name: "services_auth_user_id_fkey"
+		}).onDelete("cascade"),
+	pgPolicy("Public can view active services", { as: "permissive", for: "select", to: ["anon", "authenticated"], using: sql`(lower(status) = 'active'::text)` }),
+	pgPolicy("services_manage_own", { as: "permissive", for: "all", to: ["authenticated"] }),
+	check("services_status_check", sql`status = ANY (ARRAY['active'::text, 'inactive'::text])`),
 ]);
 
 export const departments = pgTable("departments", {
@@ -261,6 +344,7 @@ export const customerProfiles = pgTable("customer_profiles", {
 	primaryLanguage: text("primary_language"),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	isActive: boolean("is_active").default(true).notNull(),
 }, (table) => [
 	foreignKey({
 			columns: [table.authUserId],
@@ -274,38 +358,8 @@ export const customerProfiles = pgTable("customer_profiles", {
 		}).onDelete("set null"),
 	unique("customer_profiles_auth_user_id_key").on(table.authUserId),
 	pgPolicy("Customer profiles can insert own", { as: "permissive", for: "insert", to: ["authenticated"], withCheck: sql`(auth.uid() = auth_user_id)`  }),
-	pgPolicy("Customer profiles can update own", { as: "permissive", for: "update", to: ["authenticated"] }),
 	pgPolicy("Customer profiles can view own", { as: "permissive", for: "select", to: ["authenticated"] }),
-]);
-
-export const centerProfiles = pgTable("center_profiles", {
-	id: uuid().defaultRandom().primaryKey().notNull(),
-	authUserId: uuid("auth_user_id").notNull(),
-	userId: uuid("user_id"),
-	centerName: text("center_name").notNull(),
-	contactEmail: text("contact_email"),
-	contactPhone: text("contact_phone"),
-	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
-	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
-	approvalStatus: centerApprovalStatus("approval_status").default('pending').notNull(),
-	approvalNote: text("approval_note"),
-	decidedAt: timestamp("decided_at", { withTimezone: true, mode: 'string' }),
-}, (table) => [
-	foreignKey({
-			columns: [table.authUserId],
-			foreignColumns: [users.id],
-			name: "center_profiles_auth_user_id_fkey"
-		}).onDelete("cascade"),
-	foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "center_profiles_user_id_fkey"
-		}).onDelete("set null"),
-	unique("center_profiles_auth_user_id_key").on(table.authUserId),
-	pgPolicy("Center profiles can insert own", { as: "permissive", for: "insert", to: ["authenticated"], withCheck: sql`(auth.uid() = auth_user_id)`  }),
-	pgPolicy("Center profiles can update own", { as: "permissive", for: "update", to: ["authenticated"] }),
-	pgPolicy("Center profiles can view own", { as: "permissive", for: "select", to: ["authenticated"] }),
-	pgPolicy("Public can view center profiles", { as: "permissive", for: "select", to: ["anon", "authenticated"] }),
+	pgPolicy("Customer profiles can update own", { as: "permissive", for: "update", to: ["authenticated"] }),
 ]);
 
 export const ageGroups = pgTable("age_groups", {
@@ -337,6 +391,43 @@ export const languages = pgTable("languages", {
 			foreignColumns: [users.id],
 			name: "languages_auth_user_id_fkey"
 		}),
+]);
+
+export const centerProfiles = pgTable("center_profiles", {
+	id: uuid().defaultRandom().primaryKey().notNull(),
+	authUserId: uuid("auth_user_id").notNull(),
+	userId: uuid("user_id"),
+	centerName: text("center_name").notNull(),
+	contactEmail: text("contact_email"),
+	contactPhone: text("contact_phone"),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	approvalStatus: centerApprovalStatus("approval_status").default('pending').notNull(),
+	approvalNote: text("approval_note"),
+	decidedAt: timestamp("decided_at", { withTimezone: true, mode: 'string' }),
+}, (table) => [
+	index("idx_center_profiles_approval_status").using("btree", table.approvalStatus.asc().nullsLast().op("enum_ops")),
+	index("idx_center_profiles_contact_email").using("btree", sql`lower(contact_email)`),
+	index("idx_center_profiles_contact_phone").using("btree", table.contactPhone.asc().nullsLast().op("text_ops")),
+	index("idx_center_profiles_created_at").using("btree", table.createdAt.desc().nullsFirst().op("timestamptz_ops")),
+	foreignKey({
+			columns: [table.authUserId],
+			foreignColumns: [users.id],
+			name: "center_profiles_auth_user_id_fkey"
+		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [users.id],
+			name: "center_profiles_user_id_fkey"
+		}).onDelete("set null"),
+	unique("center_profiles_auth_user_id_key").on(table.authUserId),
+	pgPolicy("Center profiles can insert own", { as: "permissive", for: "insert", to: ["authenticated"], withCheck: sql`(auth.uid() = auth_user_id)`  }),
+	pgPolicy("Center profiles can view own", { as: "permissive", for: "select", to: ["authenticated"] }),
+	pgPolicy("Center profiles can update own", { as: "permissive", for: "update", to: ["authenticated"] }),
+	pgPolicy("Public can view center profiles", { as: "permissive", for: "select", to: ["anon", "authenticated"] }),
+	pgPolicy("center_profiles_select_own", { as: "permissive", for: "select", to: ["authenticated"] }),
+	pgPolicy("center_profiles_update_own", { as: "permissive", for: "update", to: ["authenticated"] }),
+	pgPolicy("center_profiles_insert_own", { as: "permissive", for: "insert", to: ["authenticated"] }),
 ]);
 
 export const clientReferralRequests = pgTable("client_referral_requests", {
@@ -372,18 +463,10 @@ export const clientReferralRequests = pgTable("client_referral_requests", {
 			foreignColumns: [users.id],
 			name: "client_referral_requests_customer_user_id_fkey"
 		}).onDelete("cascade"),
-	pgPolicy("Centers can update own referral requests", { as: "permissive", for: "update", to: ["authenticated"], using: sql`((EXISTS ( SELECT 1
-   FROM users u
-  WHERE ((u.id = client_referral_requests.center_user_id) AND (u.auth_user_id = auth.uid())))) OR (EXISTS ( SELECT 1
-   FROM center_profiles cp
-  WHERE ((cp.user_id = client_referral_requests.center_user_id) AND (cp.auth_user_id = auth.uid())))))`, withCheck: sql`((EXISTS ( SELECT 1
-   FROM users u
-  WHERE ((u.id = client_referral_requests.center_user_id) AND (u.auth_user_id = auth.uid())))) OR (EXISTS ( SELECT 1
-   FROM center_profiles cp
-  WHERE ((cp.user_id = client_referral_requests.center_user_id) AND (cp.auth_user_id = auth.uid())))))`  }),
-	pgPolicy("Centers can view own referral requests", { as: "permissive", for: "select", to: ["authenticated"] }),
-	pgPolicy("Customers can insert own referral requests", { as: "permissive", for: "insert", to: ["authenticated"] }),
+	pgPolicy("Customers can insert own referral requests", { as: "permissive", for: "insert", to: ["authenticated"], withCheck: sql`(auth.uid() = customer_auth_user_id)`  }),
 	pgPolicy("Customers can view own referral requests", { as: "permissive", for: "select", to: ["authenticated"] }),
+	pgPolicy("Centers can view own referral requests", { as: "permissive", for: "select", to: ["authenticated"] }),
+	pgPolicy("Centers can update own referral requests", { as: "permissive", for: "update", to: ["authenticated"] }),
 ]);
 
 export const therapists = pgTable("therapists", {
@@ -402,6 +485,56 @@ export const therapists = pgTable("therapists", {
 			name: "therapists_auth_user_id_fkey"
 		}).onDelete("cascade"),
 	pgPolicy("therapists_manage_own", { as: "permissive", for: "all", to: ["authenticated"], using: sql`(auth.uid() = auth_user_id)`, withCheck: sql`(auth.uid() = auth_user_id)`  }),
+]);
+
+export const rolePermissions = pgTable("role_permissions", {
+	rolePermissionId: uuid("role_permission_id").defaultRandom().primaryKey().notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	roleId: uuid("role_id").notNull(),
+	permissionId: uuid("permission_id").notNull(),
+	moduleId: uuid("module_id").notNull(),
+}, (table) => [
+	index("idx_role_permissions_module").using("btree", table.moduleId.asc().nullsLast().op("uuid_ops")),
+	index("idx_role_permissions_role").using("btree", table.roleId.asc().nullsLast().op("uuid_ops")),
+	foreignKey({
+			columns: [table.moduleId],
+			foreignColumns: [modules.moduleId],
+			name: "role_permissions_module_id_fkey"
+		}).onUpdate("cascade").onDelete("cascade"),
+	foreignKey({
+			columns: [table.permissionId],
+			foreignColumns: [permissions.permissionId],
+			name: "role_permissions_permission_id_fkey"
+		}).onUpdate("cascade").onDelete("cascade"),
+	foreignKey({
+			columns: [table.roleId],
+			foreignColumns: [roles.roleId],
+			name: "role_permissions_role_id_fkey1"
+		}).onUpdate("cascade").onDelete("cascade"),
+	unique("role_permissions_unique_triplet").on(table.roleId, table.permissionId, table.moduleId),
+	pgPolicy("role_permissions_all_authenticated", { as: "permissive", for: "all", to: ["authenticated"], using: sql`(auth.role() = 'authenticated'::text)`, withCheck: sql`(auth.role() = 'authenticated'::text)`  }),
+]);
+
+export const modules = pgTable("modules", {
+	moduleId: uuid("module_id").defaultRandom().primaryKey().notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	moduleName: text("module_name").notNull(),
+	moduleParent: text("module_parent"),
+	link: text(),
+	moduleNameLabel: text("module_name_label"),
+	moduleParentLabel: text("module_parent_label"),
+}, (table) => [
+	unique("modules_module_name_key").on(table.moduleName),
+	pgPolicy("modules_all_authenticated", { as: "permissive", for: "all", to: ["authenticated"], using: sql`(auth.role() = 'authenticated'::text)`, withCheck: sql`(auth.role() = 'authenticated'::text)`  }),
+]);
+
+export const permissions = pgTable("permissions", {
+	permissionId: uuid("permission_id").defaultRandom().primaryKey().notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	permissionName: text("permission_name").notNull(),
+}, (table) => [
+	unique("permissions_permission_name_key").on(table.permissionName),
+	pgPolicy("permissions_all_authenticated", { as: "permissive", for: "all", to: ["authenticated"], using: sql`(auth.role() = 'authenticated'::text)`, withCheck: sql`(auth.role() = 'authenticated'::text)`  }),
 ]);
 
 export const serviceSpecializations = pgTable("service_specializations", {
@@ -446,4 +579,28 @@ export const serviceTherapists = pgTable("service_therapists", {
   WHERE ((s.id = service_therapists.service_id) AND (s.auth_user_id = auth.uid()))))`, withCheck: sql`(EXISTS ( SELECT 1
    FROM services s
   WHERE ((s.id = service_therapists.service_id) AND (s.auth_user_id = auth.uid()))))`  }),
+]);
+
+export const serviceAgeGroups = pgTable("service_age_groups", {
+	serviceId: uuid("service_id").notNull(),
+	ageGroupId: uuid("age_group_id").notNull(),
+}, (table) => [
+	index("idx_service_age_groups_age_group_id").using("btree", table.ageGroupId.asc().nullsLast().op("uuid_ops")),
+	index("idx_service_age_groups_service_id").using("btree", table.serviceId.asc().nullsLast().op("uuid_ops")),
+	foreignKey({
+			columns: [table.ageGroupId],
+			foreignColumns: [ageGroups.id],
+			name: "service_age_groups_age_group_id_fkey"
+		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.serviceId],
+			foreignColumns: [services.id],
+			name: "service_age_groups_service_id_fkey"
+		}).onDelete("cascade"),
+	primaryKey({ columns: [table.serviceId, table.ageGroupId], name: "service_age_groups_pkey"}),
+	pgPolicy("service_age_groups_manage_own", { as: "permissive", for: "all", to: ["authenticated"], using: sql`(EXISTS ( SELECT 1
+   FROM services s
+  WHERE ((s.id = service_age_groups.service_id) AND (s.auth_user_id = auth.uid()))))`, withCheck: sql`(EXISTS ( SELECT 1
+   FROM services s
+  WHERE ((s.id = service_age_groups.service_id) AND (s.auth_user_id = auth.uid()))))`  }),
 ]);

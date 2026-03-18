@@ -29,3 +29,14 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
 
   return NextResponse.json({ data: next.flatPages.find((item) => item.id === id) })
 }
+
+export async function DELETE(_: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const { id } = await context.params
+
+  const next = await updateDb((current) => ({
+    ...current,
+    flatPages: current.flatPages.filter((item) => item.id !== id),
+  }))
+
+  return NextResponse.json({ data: { id }, total: next.flatPages.length })
+}

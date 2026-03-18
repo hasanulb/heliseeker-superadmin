@@ -1,7 +1,7 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useForm } from "react-hook-form"
 import dynamic from "next/dynamic"
 
@@ -14,13 +14,16 @@ import "react-quill-new/dist/quill.snow.css"
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false })
 
 import { FlatPagesTable } from "./_components/flat-pages-table"
-import { useCreateFlatPage, useFlatPages, useUpdateFlatPage } from "./_hooks/use-flat-pages"
+import { useCreateFlatPage, useDeleteFlatPage, useEditFlatPage, useFlatPages, useUpdateFlatPage } from "./_hooks/use-flat-pages"
 import { flatPageSchema, FlatPageFormValues } from "./_schemas/flat-page.schema"
 
 export default function FlatPagesPage() {
   const { data, isLoading } = useFlatPages()
   const createMutation = useCreateFlatPage()
   const updateMutation = useUpdateFlatPage()
+  const editMutation = useEditFlatPage()
+  const deleteMutation = useDeleteFlatPage()
+  const [editingPageId, setEditingPageId] = useState<string | null>(null)
 
   const form = useForm<FlatPageFormValues>({
     resolver: zodResolver(flatPageSchema),
@@ -63,6 +66,29 @@ export default function FlatPagesPage() {
     [],
   )
 
+  useEffect(() => {
+    if (!editingPageId) return
+    const page = data?.data?.find((item) => item.id === editingPageId)
+    if (page) {
+      form.reset({
+        title: page.title,
+        slug: page.slug,
+        description: page.description,
+      })
+    }
+  }, [editingPageId, data?.data, form])
+
+  const handleSave = async (values: FlatPageFormValues) => {
+    if (editingPageId) {
+      await editMutation.mutateAsync({ id: editingPageId, ...values })
+      setEditingPageId(null)
+      form.reset({ title: "", slug: "", description: "" })
+      return
+    }
+    await createMutation.mutateAsync(values)
+    form.reset({ title: "", slug: "", description: "" })
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -72,16 +98,13 @@ export default function FlatPagesPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Create New Flat Page</CardTitle>
+          <CardTitle>{editingPageId ? "Edit Flat Page" : "Create New Flat Page"}</CardTitle>
         </CardHeader>
         <CardContent>
           <Form {...form}>
             <form
               className="space-y-4"
-              onSubmit={form.handleSubmit(async (values) => {
-                await createMutation.mutateAsync(values)
-                form.reset({ title: "", slug: "", description: "" })
-              })}
+              onSubmit={form.handleSubmit(handleSave)}
             >
               <div className="grid gap-3 md:grid-cols-2">
                 <FormField
@@ -135,7 +158,24 @@ export default function FlatPagesPage() {
                 )}
               />
 
-              <Button type="submit" disabled={createMutation.isPending}>Create Page</Button>
+              <div className="flex items-center gap-2">
+                <Button type="submit" disabled={createMutation.isPending || editMutation.isPending}>
+                  {editingPageId ? "Update Page" : "Create Page"}
+                </Button>
+                {editingPageId && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setEditingPageId(null)
+                      form.reset({ title: "", slug: "", description: "" })
+                    }}
+                    disabled={createMutation.isPending || editMutation.isPending}
+                  >
+                    Cancel
+                  </Button>
+                )}
+              </div>
             </form>
           </Form>
         </CardContent>
@@ -152,6 +192,11 @@ export default function FlatPagesPage() {
             <FlatPagesTable
               pages={data?.data || []}
               onToggle={(id, enabled) => updateMutation.mutate({ id, enabled })}
+              onEdit={(page) => setEditingPageId(page.id)}
+              onDelete={(page) => {
+                if (!window.confirm("Delete this page? This cannot be undone.")) return
+                deleteMutation.mutate({ id: page.id })
+              }}
             />
           )}
         </CardContent>

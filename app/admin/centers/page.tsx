@@ -116,7 +116,7 @@ export default function CentersPage() {
                 <CentersTable
                   centers={visibleCenters}
                   onUpdateStatus={handleUpdateStatus}
-                  showApprovalActions={statusFilter === "pending"}
+                  showApprovalActions={false}
                   showStatusSelect={statusFilter === "completed"}
                   updatingCenterId={updatingCenterId}
                   updatingStatus={updatingStatus}

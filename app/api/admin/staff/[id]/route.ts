@@ -13,6 +13,25 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
 
   const supabase = getServiceRoleSupabase()
 
+  if (payload.role && payload.role.trim() !== "super_admin") {
+    const { data: roleRow, error: roleError } = await supabase
+      .from("roles")
+      .select("name")
+      .ilike("name", payload.role.trim())
+      .limit(1)
+      .maybeSingle()
+
+    if (roleError) {
+      return NextResponse.json({ message: roleError.message }, { status: 500 })
+    }
+
+    if (!roleRow?.name) {
+      return NextResponse.json({ message: "Invalid role. Create the role first." }, { status: 400 })
+    }
+
+    payload.role = roleRow.name
+  }
+
   const { data: adminRow, error: adminError } = await supabase
     .from("admins")
     .select("admin_id, auth_user_id")

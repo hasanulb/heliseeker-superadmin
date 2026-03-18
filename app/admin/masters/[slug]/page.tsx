@@ -154,10 +154,6 @@ export default function MasterPage({ params }: { params: Promise<{ slug: string 
 
   const access = useRequirePermission(moduleKey, "view")
 
-  if (!access.isReady) {
-    return <p className="text-sm text-muted-foreground">Loading...</p>
-  }
-
   const entityLabel = config?.title?.endsWith("s")
     ? config.title.slice(0, -1)
     : config?.title || "Item"
@@ -217,6 +213,10 @@ export default function MasterPage({ params }: { params: Promise<{ slug: string 
         .some((value) => value!.toLowerCase().includes(term)),
     )
   }, [items, tableQuery])
+
+  if (!access.isReady) {
+    return <p className="text-sm text-muted-foreground">Loading...</p>
+  }
 
   if (!config) {
     return (

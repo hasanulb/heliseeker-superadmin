@@ -66,7 +66,7 @@ export default function UsersPage() {
                             }
                           }}
                         />
-                        <span>{user.isActive ? "Unblocked" : "Blocked"}</span>
+                        <span>{user.isActive ? "Active" : "Inactive"}</span>
                       </div>
                     </TableCell>
                   </TableRow>

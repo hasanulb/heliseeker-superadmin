@@ -52,10 +52,6 @@ export default function StaffUsersPage() {
     }
   }, [roles, form])
 
-  if (!access.isReady) {
-    return <p className="text-sm text-muted-foreground">Loading...</p>
-  }
-
   const canEdit = access.can("userManagement", "edit")
   const staffUsers = data?.data || []
   const filteredUsers = useMemo(() => {
@@ -67,6 +63,10 @@ export default function StaffUsersPage() {
         .some((value) => value!.toLowerCase().includes(term)),
     )
   }, [search, staffUsers])
+
+  if (!access.isReady) {
+    return <p className="text-sm text-muted-foreground">Loading...</p>
+  }
 
   return (
     <div className="space-y-6">

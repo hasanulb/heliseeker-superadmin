@@ -50,8 +50,9 @@ function pickAllowed(payload: Record<string, unknown>, allowed: readonly string[
   return Object.fromEntries(Object.entries(payload).filter(([key]) => allowed.includes(key)))
 }
 
-export async function GET(_request: NextRequest, { params }: { params: { slug: string } }) {
-  const config = getConfig(params.slug)
+export async function GET(_request: NextRequest, context: { params: Promise<{ slug: string }> }) {
+  const { slug } = await context.params
+  const config = getConfig(slug)
   if (!config) {
     return NextResponse.json({ message: "Unknown master type" }, { status: 400 })
   }
@@ -59,11 +60,12 @@ export async function GET(_request: NextRequest, { params }: { params: { slug: s
   const supabase = await getServerSupabase()
   let query = supabase.from(config.table).select("*")
 
-  if (params.slug === "specializations") {
+  if (slug === "specializations" || slug === "departments" || slug === "services") {
     const { data: adminUsers, error: adminError } = await supabase
       .from("admins")
       .select("auth_user_id")
       .not("auth_user_id", "is", null)
+      .eq("role", "super_admin")
 
     if (adminError) {
       return NextResponse.json({ message: adminError.message }, { status: 500 })
@@ -91,8 +93,9 @@ export async function GET(_request: NextRequest, { params }: { params: { slug: s
   return NextResponse.json({ data })
 }
 
-export async function POST(request: NextRequest, { params }: { params: { slug: string } }) {
-  const config = getConfig(params.slug)
+export async function POST(request: NextRequest, context: { params: Promise<{ slug: string }> }) {
+  const { slug } = await context.params
+  const config = getConfig(slug)
   if (!config) {
     return NextResponse.json({ message: "Unknown master type" }, { status: 400 })
   }
@@ -103,12 +106,38 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
   const { data: userData } = await supabase.auth.getUser()
   const authUserId = userData?.user?.id
 
+  if (slug === "age-groups") {
+    if (!authUserId) {
+      return NextResponse.json({ message: "Not authenticated" }, { status: 401 })
+    }
+
+    const rawName = typeof payload.name === "string" ? payload.name : ""
+    const name = rawName.trim()
+    if (name) {
+      payload.name = name
+      const { data: existing, error: existingError } = await supabase
+        .from("age_groups")
+        .select("id")
+        .eq("auth_user_id", authUserId)
+        .ilike("name", name)
+        .limit(1)
+
+      if (existingError) {
+        return NextResponse.json({ message: existingError.message }, { status: 500 })
+      }
+
+      if ((existing || []).length > 0) {
+        return NextResponse.json({ message: "Age group already exists" }, { status: 409 })
+      }
+    }
+  }
+
   const missing = config.required.filter((key) => payload[key] === undefined || payload[key] === null || payload[key] === "")
   if (missing.length > 0) {
     return NextResponse.json({ message: `Missing required fields: ${missing.join(", ")}` }, { status: 400 })
   }
 
-  const insertPayload = {
+  const insertPayload: Record<string, unknown> = {
     ...pickAllowed(payload, config.allowed),
     ...(authUserId ? { auth_user_id: authUserId } : {}),
   }
@@ -122,8 +151,9 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
   return NextResponse.json({ data }, { status: 201 })
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { slug: string } }) {
-  const config = getConfig(params.slug)
+export async function PATCH(request: NextRequest, context: { params: Promise<{ slug: string }> }) {
+  const { slug } = await context.params
+  const config = getConfig(slug)
   if (!config) {
     return NextResponse.json({ message: "Unknown master type" }, { status: 400 })
   }
@@ -135,6 +165,37 @@ export async function PATCH(request: NextRequest, { params }: { params: { slug: 
   }
 
   const supabase = await getServerSupabase()
+
+  if (slug === "age-groups" && payload.name !== undefined) {
+    const { data: userData } = await supabase.auth.getUser()
+    const authUserId = userData?.user?.id
+    if (!authUserId) {
+      return NextResponse.json({ message: "Not authenticated" }, { status: 401 })
+    }
+
+    const rawName = typeof payload.name === "string" ? payload.name : ""
+    const name = rawName.trim()
+    payload.name = name
+
+    if (name) {
+      const { data: existing, error: existingError } = await supabase
+        .from("age_groups")
+        .select("id")
+        .eq("auth_user_id", authUserId)
+        .ilike("name", name)
+        .neq("id", id)
+        .limit(1)
+
+      if (existingError) {
+        return NextResponse.json({ message: existingError.message }, { status: 500 })
+      }
+
+      if ((existing || []).length > 0) {
+        return NextResponse.json({ message: "Age group already exists" }, { status: 409 })
+      }
+    }
+  }
+
   const updatePayload = {
     ...pickAllowed(payload, config.allowed),
   }
@@ -151,8 +212,9 @@ export async function PATCH(request: NextRequest, { params }: { params: { slug: 
   return NextResponse.json({ data })
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { slug: string } }) {
-  const config = getConfig(params.slug)
+export async function DELETE(request: NextRequest, context: { params: Promise<{ slug: string }> }) {
+  const { slug } = await context.params
+  const config = getConfig(slug)
   if (!config) {
     return NextResponse.json({ message: "Unknown master type" }, { status: 400 })
   }

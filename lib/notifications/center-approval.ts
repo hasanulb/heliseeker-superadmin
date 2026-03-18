@@ -1,4 +1,5 @@
 import "server-only"
+import nodemailer from "nodemailer"
 
 interface CenterDecisionNotificationPayload {
   centerId: string
@@ -73,54 +74,125 @@ function buildCenterDecisionEmail(payload: CenterDecisionNotificationPayload): C
   return null
 }
 
+async function dispatchCenterDecisionEmail(email: CenterDecisionEmailPayload): Promise<CenterDecisionNotificationResult> {
+  const apiKey = process.env.RESEND_API_KEY
+  const fromEmail = process.env.RESEND_FROM_EMAIL
+
+  try {
+    if (apiKey && fromEmail) {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS)
+
+      const response = await fetch(
+        "https://api.resend.com/emails",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: fromEmail,
+            to: [email.to],
+            subject: email.subject,
+            html: email.html,
+            text: email.text,
+          }),
+          signal: controller.signal,
+        },
+      ).finally(() => clearTimeout(timeoutId))
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        return {
+          dispatched: false,
+          reason: `Resend email request failed (${response.status}): ${errorText || "Unknown error"}`,
+        }
+      }
+
+      return { dispatched: true }
+    }
+
+    const smtpHost = process.env.SMTP_HOST
+    const smtpPort = Number(process.env.SMTP_PORT || 587)
+    const smtpUser = process.env.SMTP_USER
+    const smtpPass = process.env.SMTP_PASS
+    const smtpFrom = process.env.SMTP_FROM
+
+    if (!smtpHost || !smtpUser || !smtpPass || !smtpFrom) {
+      return {
+        dispatched: false,
+        reason: "Email is not configured (set RESEND_API_KEY/RESEND_FROM_EMAIL or SMTP_HOST/SMTP_USER/SMTP_PASS/SMTP_FROM)",
+      }
+    }
+
+    const transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpPort === 465,
+      auth: { user: smtpUser, pass: smtpPass },
+    })
+
+    await transporter.sendMail({
+      from: smtpFrom,
+      to: email.to,
+      subject: email.subject,
+      text: email.text,
+      html: email.html,
+    })
+
+    return { dispatched: true }
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : "Unknown email error"
+    return { dispatched: false, reason }
+  }
+}
+
 export async function dispatchCenterDecisionNotification(
   payload: CenterDecisionNotificationPayload,
 ): Promise<CenterDecisionNotificationResult> {
   const webhookUrl = process.env.CENTER_APPROVAL_NOTIFICATION_WEBHOOK_URL?.trim()
+  const emailPayload = buildCenterDecisionEmail(payload)
 
-  if (!webhookUrl) {
-    return {
-      dispatched: false,
-      reason: "CENTER_APPROVAL_NOTIFICATION_WEBHOOK_URL is not configured",
-    }
-  }
+  if (webhookUrl) {
+    try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS)
+      const channelHints = emailPayload ? ["email", "in-app"] : ["in-app"]
 
-  try {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS)
-    const emailPayload = buildCenterDecisionEmail(payload)
-    const channelHints = emailPayload ? ["email", "in-app"] : ["in-app"]
-
-    const response = await fetch(
-      webhookUrl,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await fetch(
+        webhookUrl,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            event: "center.approval.decided",
+            channelHints,
+            email: emailPayload,
+            payload,
+          }),
+          signal: controller.signal,
         },
-        body: JSON.stringify({
-          event: "center.approval.decided",
-          channelHints,
-          email: emailPayload,
-          payload,
-        }),
-        signal: controller.signal,
-      },
-    ).finally(() => clearTimeout(timeoutId))
+      ).finally(() => clearTimeout(timeoutId))
 
-    if (!response.ok) {
-      return {
-        dispatched: false,
-        reason: `Notification webhook returned ${response.status}`,
+      if (response.ok) {
+        return { dispatched: true }
       }
-    }
-
-    return { dispatched: true }
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : "Unknown notification error"
-    return {
-      dispatched: false,
-      reason,
+    } catch (error) {
+      console.warn(
+        `[dispatchCenterDecisionNotification] webhook dispatch failed: ${error instanceof Error ? error.message : "unknown error"}`,
+      )
     }
   }
+
+  if (!emailPayload) {
+    if (!payload.contactEmail) {
+      return { dispatched: false, reason: "Center does not have a contact email" }
+    }
+    return { dispatched: false, reason: `No email template for status: ${payload.status}` }
+  }
+
+  return dispatchCenterDecisionEmail(emailPayload)
 }

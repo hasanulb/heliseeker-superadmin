@@ -18,6 +18,7 @@ import { Role } from "@/lib/admin-panel/types"
 
 const MODULES = [
   { key: "centers", label: "Centers" },
+  { key: "leads", label: "Leads" },
   { key: "department", label: "Department" },
   { key: "service", label: "Service" },
   { key: "specialization", label: "Specialization" },
@@ -67,10 +68,6 @@ export default function AccessManagementPage() {
     }
   }, [editingRole, form, buildPermissions])
 
-  if (!access.isReady) {
-    return <p className="text-sm text-muted-foreground">Loading...</p>
-  }
-
   const roles = data?.data || []
   const filteredRoles = useMemo(() => {
     const term = search.trim().toLowerCase()
@@ -80,6 +77,10 @@ export default function AccessManagementPage() {
       return role.name.toLowerCase().includes(term) || permissionText.toLowerCase().includes(term)
     })
   }, [roles, search])
+
+  if (!access.isReady) {
+    return <p className="text-sm text-muted-foreground">Loading...</p>
+  }
 
   return (
     <div className="space-y-6">

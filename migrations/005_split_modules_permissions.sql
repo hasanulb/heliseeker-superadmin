@@ -48,7 +48,7 @@ ON CONFLICT (permission_name) DO NOTHING;
 INSERT INTO public.modules (module_name, module_name_label, link)
 VALUES
   ('centers', 'Centers', null),
-  ('leads', 'Leads', null),
+  ('leads', 'Enquiries', null),
   ('department', 'Department', null),
   ('service', 'Service', null),
   ('specialization', 'Specialization', null),

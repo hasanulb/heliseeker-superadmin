@@ -29,6 +29,8 @@ export interface Patient {
 
 export type FilterKind = "department" | "therapy" | "service" | "ageRange" | "location" | "language"
 
+export type AgeUnit = "month" | "year"
+
 export interface SearchFilterItem {
   id: string
   kind: FilterKind
@@ -37,6 +39,9 @@ export interface SearchFilterItem {
   parentId?: string
   enabled: boolean
   order: number
+  fromAge?: number
+  toAge?: number
+  unit?: AgeUnit
 }
 
 export interface StaffPermission {
@@ -44,6 +49,7 @@ export interface StaffPermission {
   view: boolean
   create: boolean
   edit: boolean
+  delete?: boolean
 }
 
 export interface Role {

@@ -54,6 +54,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
         view: Boolean(permission.view),
         create: Boolean(permission.create),
         edit: Boolean(permission.edit),
+        delete: Boolean(permission.delete),
       }))
       .filter((permission) => {
         const key = permission.module.toLowerCase()
@@ -75,7 +76,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
 
       const [{ data: modulesData, error: modulesError }, { data: permsData, error: permsError }] = await Promise.all([
         supabase.from("modules").select("module_id, module_name").in("module_name", moduleNames),
-        supabase.from("permissions").select("permission_id, permission_name").in("permission_name", ["view", "create", "edit"]),
+        supabase.from("permissions").select("permission_id, permission_name").in("permission_name", ["view", "create", "edit", "delete"]),
       ])
 
       if (modulesError) {
@@ -92,9 +93,10 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
       const viewId = permIdByName.get("view")
       const createId = permIdByName.get("create")
       const editId = permIdByName.get("edit")
+      const deleteId = permIdByName.get("delete")
 
-      if (!viewId || !createId || !editId) {
-        return NextResponse.json({ message: "Missing base permissions (view/create/edit) in permissions table" }, { status: 500 })
+      if (!viewId || !createId || !editId || !deleteId) {
+        return NextResponse.json({ message: "Missing base permissions (view/create/edit/delete) in permissions table" }, { status: 500 })
       }
 
       const joinRows: Array<{ role_id: string; module_id: string; permission_id: string }> = []
@@ -105,6 +107,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
         if (p.view) joinRows.push({ role_id: id, module_id: moduleId, permission_id: viewId })
         if (p.create) joinRows.push({ role_id: id, module_id: moduleId, permission_id: createId })
         if (p.edit) joinRows.push({ role_id: id, module_id: moduleId, permission_id: editId })
+        if (p.delete) joinRows.push({ role_id: id, module_id: moduleId, permission_id: deleteId })
       }
 
       if (joinRows.length > 0) {
@@ -139,10 +142,11 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
           const moduleKey = rp?.modules?.module_name as string | undefined
           const permKey = rp?.permissions?.permission_name as string | undefined
           if (!moduleKey || !permKey) continue
-          const current = byModule.get(moduleKey) || { module: moduleKey, view: false, create: false, edit: false }
+          const current = byModule.get(moduleKey) || { module: moduleKey, view: false, create: false, edit: false, delete: false }
           if (normalize(permKey) === "view") current.view = true
           if (normalize(permKey) === "create") current.create = true
           if (normalize(permKey) === "edit") current.edit = true
+          if (normalize(permKey) === "delete") current.delete = true
           byModule.set(moduleKey, current)
         }
         return Array.from(byModule.values())
@@ -201,10 +205,11 @@ export async function DELETE(_: NextRequest, context: { params: Promise<{ id: st
         const moduleKey = rp?.modules?.module_name as string | undefined
         const permKey = rp?.permissions?.permission_name as string | undefined
         if (!moduleKey || !permKey) continue
-        const current = byModule.get(moduleKey) || { module: moduleKey, view: false, create: false, edit: false }
+        const current = byModule.get(moduleKey) || { module: moduleKey, view: false, create: false, edit: false, delete: false }
         if (normalize(permKey) === "view") current.view = true
         if (normalize(permKey) === "create") current.create = true
         if (normalize(permKey) === "edit") current.edit = true
+        if (normalize(permKey) === "delete") current.delete = true
         byModule.set(moduleKey, current)
       }
       return Array.from(byModule.values())

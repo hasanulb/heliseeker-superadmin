@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { SearchInput } from "@/components/ui/search-input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 
@@ -175,7 +176,7 @@ export default function StaffUsersPage() {
         </CardHeader>
         <CardContent>
           <div className="mb-4">
-            <Input
+            <SearchInput
               placeholder="Search staff by name, email, or role"
               value={search}
               onChange={(event) => setSearch(event.target.value)}

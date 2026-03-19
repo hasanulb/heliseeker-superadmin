@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 
 import { FilterList } from "./_components/filter-list"
 import { useCreateSearchFilter, useReorderSearchFilters, useSearchFilters, useUpdateSearchFilter } from "./_hooks/use-search-filters"
@@ -19,7 +20,9 @@ export default function SearchFiltersPage() {
   const searchParams = useSearchParams()
   const queryKind = searchParams.get("kind")
   const validKinds = ["department", "therapy", "service", "ageRange", "location", "language"] as const
-  const defaultKind = validKinds.includes(queryKind as (typeof validKinds)[number]) ? queryKind : "department"
+  const defaultKind: CreateSearchFilterFormValues["kind"] = validKinds.includes(queryKind as (typeof validKinds)[number])
+    ? (queryKind as CreateSearchFilterFormValues["kind"])
+    : "department"
   const { data, isLoading } = useSearchFilters()
   const createMutation = useCreateSearchFilter()
   const updateMutation = useUpdateSearchFilter()
@@ -32,6 +35,10 @@ export default function SearchFiltersPage() {
       name: "",
       description: "",
       parentId: "none",
+      enabled: true,
+      fromAge: undefined,
+      toAge: undefined,
+      unit: "year",
     },
   })
 
@@ -42,6 +49,7 @@ export default function SearchFiltersPage() {
   }, [form, queryKind])
 
   const parentOptions = useMemo(() => data?.data || [], [data?.data])
+  const selectedKind = form.watch("kind")
 
   return (
     <div className="space-y-6">
@@ -60,12 +68,17 @@ export default function SearchFiltersPage() {
               className="grid gap-3 md:grid-cols-2"
               onSubmit={form.handleSubmit(async (values) => {
                 const payload = {
-                  ...values,
+                  kind: values.kind,
+                  name: values.name,
                   parentId: values.parentId === "none" ? undefined : values.parentId,
                   description: values.description || undefined,
+                  enabled: values.enabled ?? true,
+                  ...(values.kind === "ageRange"
+                    ? { fromAge: values.fromAge, toAge: values.toAge, unit: values.unit }
+                    : {}),
                 }
                 await createMutation.mutateAsync(payload)
-                form.reset({ kind: "department", name: "", description: "", parentId: "none" })
+                form.reset({ kind: "department", name: "", description: "", parentId: "none", enabled: true, fromAge: undefined, toAge: undefined, unit: "year" })
               })}
             >
               <FormField
@@ -99,7 +112,7 @@ export default function SearchFiltersPage() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Name</FormLabel>
+                    <FormLabel>{selectedKind === "ageRange" ? "Age Range Name" : "Name"}</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -107,6 +120,78 @@ export default function SearchFiltersPage() {
                   </FormItem>
                 )}
               />
+
+              {selectedKind === "ageRange" && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="fromAge"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>From Age</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            inputMode="numeric"
+                            value={field.value ?? ""}
+                            onChange={(e) => {
+                              if (e.target.value === "") return field.onChange(undefined)
+                              const n = Number(e.target.value)
+                              field.onChange(Number.isNaN(n) ? undefined : n)
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="toAge"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>To Age</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            inputMode="numeric"
+                            value={field.value ?? ""}
+                            onChange={(e) => {
+                              if (e.target.value === "") return field.onChange(undefined)
+                              const n = Number(e.target.value)
+                              field.onChange(Number.isNaN(n) ? undefined : n)
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="unit"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Unit</FormLabel>
+                        <Select defaultValue={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select unit" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="month">Month</SelectItem>
+                            <SelectItem value="year">Year</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </>
+              )}
 
               <FormField
                 control={form.control}
@@ -142,6 +227,25 @@ export default function SearchFiltersPage() {
                       </SelectContent>
                     </Select>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="enabled"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between rounded-md border px-3 py-2 md:col-span-2">
+                    <div>
+                      <FormLabel>Status</FormLabel>
+                      <p className="text-xs text-muted-foreground">Toggle to enable/disable this filter.</p>
+                    </div>
+                    <FormControl>
+                      <div className="flex items-center gap-2">
+                        <Switch checked={field.value ?? true} onCheckedChange={field.onChange} />
+                        <span className="text-sm">{(field.value ?? true) ? "Enabled" : "Disabled"}</span>
+                      </div>
+                    </FormControl>
                   </FormItem>
                 )}
               />

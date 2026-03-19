@@ -362,22 +362,6 @@ export const customerProfiles = pgTable("customer_profiles", {
 	pgPolicy("Customer profiles can update own", { as: "permissive", for: "update", to: ["authenticated"] }),
 ]);
 
-export const ageGroups = pgTable("age_groups", {
-	id: uuid().defaultRandom().primaryKey().notNull(),
-	name: text().notNull(),
-	description: text(),
-	authUserId: uuid("auth_user_id"),
-}, (table) => [
-	uniqueIndex("age_groups_auth_user_id_name_key").using("btree", table.authUserId.asc().nullsLast().op("text_ops"), table.name.asc().nullsLast().op("text_ops")),
-	index("idx_age_groups_auth_user_id").using("btree", table.authUserId.asc().nullsLast().op("uuid_ops")),
-	foreignKey({
-			columns: [table.authUserId],
-			foreignColumns: [users.id],
-			name: "age_groups_auth_user_id_fkey"
-		}).onDelete("cascade"),
-	pgPolicy("age_groups_manage_own", { as: "permissive", for: "all", to: ["authenticated"], using: sql`(auth.uid() = auth_user_id)`, withCheck: sql`(auth.uid() = auth_user_id)`  }),
-]);
-
 export const languages = pgTable("languages", {
 	id: uuid().defaultRandom().primaryKey().notNull(),
 	name: text().notNull(),
@@ -391,6 +375,28 @@ export const languages = pgTable("languages", {
 			foreignColumns: [users.id],
 			name: "languages_auth_user_id_fkey"
 		}),
+]);
+
+export const ageGroups = pgTable("age_groups", {
+	id: uuid().defaultRandom().primaryKey().notNull(),
+	name: text().notNull(),
+	description: text(),
+	authUserId: uuid("auth_user_id"),
+	fromAge: integer("from_age"),
+	toAge: integer("to_age"),
+	unit: text(),
+	status: boolean().default(true).notNull(),
+}, (table) => [
+	uniqueIndex("age_groups_auth_user_id_name_key").using("btree", table.authUserId.asc().nullsLast().op("uuid_ops"), table.name.asc().nullsLast().op("text_ops")),
+	index("idx_age_groups_auth_user_id").using("btree", table.authUserId.asc().nullsLast().op("uuid_ops")),
+	index("idx_age_groups_status").using("btree", table.status.asc().nullsLast().op("bool_ops")),
+	foreignKey({
+			columns: [table.authUserId],
+			foreignColumns: [users.id],
+			name: "age_groups_auth_user_id_fkey"
+		}).onDelete("cascade"),
+	pgPolicy("age_groups_manage_own", { as: "permissive", for: "all", to: ["authenticated"], using: sql`(auth.uid() = auth_user_id)`, withCheck: sql`(auth.uid() = auth_user_id)`  }),
+	check("age_groups_unit_check", sql`(unit = ANY (ARRAY['month'::text, 'year'::text])) OR (unit IS NULL)`),
 ]);
 
 export const centerProfiles = pgTable("center_profiles", {

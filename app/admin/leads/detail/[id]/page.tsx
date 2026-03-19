@@ -15,11 +15,11 @@ export default function LeadDetail() {
 
   return (
     <ContentDetailLayout
-      title="Lead Details"
+      title="Enquiry Details"
       onEdit={() => router.push(`/admin/leads/edit/${id}`)}
       loading={isLoading}
       notFound={!lead || !!error}
-      notFoundMessage={error ? "Error loading lead." : "Lead not found."}
+      notFoundMessage={error ? "Error loading enquiry." : "Enquiry not found."}
     >
       {lead && (
         <>
@@ -28,7 +28,6 @@ export default function LeadDetail() {
           <LabelAndValueComponent label="Email" value={lead.email || ""} />
           <LabelAndValueComponent label="Mobile" value={lead.mobile || ""} />
           <LabelAndValueComponent label="Message" value={lead.message || ""} />
-          <LabelAndValueComponent label="Source" value={lead.source || ""} />
           <LabelAndValueComponent label="Created At" value={new Date(lead.created_at).toLocaleString()} />
         </>
       )}

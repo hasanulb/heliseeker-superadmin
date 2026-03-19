@@ -12,7 +12,6 @@ type LeadRow = {
   email: string
   phone: string | null
   message: string | null
-  source: string | null
   createdAt: string | Date
 }
 
@@ -38,7 +37,6 @@ export function LeadsTable({ leads }: { leads: LeadRow[] }) {
           <TableHead>Email</TableHead>
           <TableHead>Phone</TableHead>
           <TableHead>Message</TableHead>
-          <TableHead>Source</TableHead>
           <TableHead>Created</TableHead>
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
@@ -52,7 +50,6 @@ export function LeadsTable({ leads }: { leads: LeadRow[] }) {
             <TableCell>{lead.email}</TableCell>
             <TableCell>{lead.phone || "—"}</TableCell>
             <TableCell className="max-w-[380px]">{snippet(lead.message)}</TableCell>
-            <TableCell>{lead.source || "—"}</TableCell>
             <TableCell>{formatCreatedAt(lead.createdAt)}</TableCell>
             <TableCell className="text-right">
               <Button size="sm" variant="outline" asChild>
@@ -65,4 +62,3 @@ export function LeadsTable({ leads }: { leads: LeadRow[] }) {
     </Table>
   )
 }
-

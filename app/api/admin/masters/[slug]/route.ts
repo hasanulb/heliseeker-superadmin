@@ -33,8 +33,8 @@ const masterTableMap = {
   },
   "age-groups": {
     table: "age_groups",
-    required: ["name"],
-    allowed: ["name", "description", "auth_user_id"],
+    required: ["name", "from_age", "to_age", "unit"],
+    allowed: ["name", "description", "from_age", "to_age", "unit", "status", "auth_user_id"],
     orderBy: { column: "name", ascending: true },
     supportsUpdatedAt: false,
   },

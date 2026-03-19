@@ -57,7 +57,7 @@ export const leadsRouter = createTRPCRouter({
 
     const rows = await db.select().from(leads).where(eq(leads.id, input.id)).limit(1)
     if (rows.length === 0) {
-      throw new TRPCError({ code: "NOT_FOUND", message: "Lead not found" })
+      throw new TRPCError({ code: "NOT_FOUND", message: "Enquiry not found" })
     }
     return { data: rows[0] }
   }),

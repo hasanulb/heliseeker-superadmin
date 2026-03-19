@@ -87,14 +87,20 @@
     {
       "id": "f_4",
       "kind": "ageRange",
-      "name": "Infancy 0-2",
+      "name": "Infancy",
+      "fromAge": 0,
+      "toAge": 2,
+      "unit": "year",
       "enabled": true,
       "order": 4
     },
     {
       "id": "f_5",
       "kind": "ageRange",
-      "name": "Early Childhood 2-6",
+      "name": "Early Childhood",
+      "fromAge": 2,
+      "toAge": 6,
+      "unit": "year",
       "enabled": true,
       "order": 7
     },

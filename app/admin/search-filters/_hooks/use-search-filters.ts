@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { deleteApi, getApi, patchApi, postApi } from "@/lib/admin-panel/client"
-import { SearchFilterItem } from "@/lib/admin-panel/types"
+import { AgeUnit, SearchFilterItem } from "@/lib/admin-panel/types"
 
 import { CreateSearchFilterPayload, SearchFiltersResponse } from "../_types"
 
@@ -23,7 +23,7 @@ export function useCreateSearchFilter() {
 export function useUpdateSearchFilter() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (payload: { id: string; enabled?: boolean; name?: string; description?: string }) =>
+    mutationFn: (payload: { id: string; enabled?: boolean; name?: string; description?: string; parentId?: string; fromAge?: number; toAge?: number; unit?: AgeUnit }) =>
       patchApi("/api/admin/search-filters", payload),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-search-filters"] }),
   })

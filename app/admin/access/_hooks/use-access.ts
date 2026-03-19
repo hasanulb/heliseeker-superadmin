@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { useProfile } from "@/app/contexts/profile.context"
 import { useRoles } from "./use-roles"
 
-type AccessAction = "view" | "create" | "edit"
+type AccessAction = "view" | "create" | "edit" | "delete"
 
 function normalize(value?: string | null) {
   return (value || "").trim().toLowerCase()

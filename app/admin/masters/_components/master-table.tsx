@@ -9,6 +9,10 @@ export interface MasterTableItem {
   description?: string
   departmentName?: string
   ageGroupName?: string
+  fromAge?: number
+  toAge?: number
+  unit?: string
+  status?: boolean
 }
 
 interface MasterTableProps {
@@ -17,6 +21,8 @@ interface MasterTableProps {
   onDelete: (id: string) => void
   showDepartment?: boolean
   showAgeGroup?: boolean
+  showAgeRange?: boolean
+  showStatus?: boolean
   showDescription?: boolean
   nameLabel?: string
   canEdit?: boolean
@@ -29,6 +35,8 @@ export function MasterTable({
   onDelete,
   showDepartment,
   showAgeGroup,
+  showAgeRange,
+  showStatus,
   showDescription = true,
   nameLabel = "Name",
   canEdit = true,
@@ -39,9 +47,17 @@ export function MasterTable({
       <TableHeader>
         <TableRow>
           <TableHead>{nameLabel}</TableHead>
+          {showAgeRange && (
+            <>
+              <TableHead>From Age</TableHead>
+              <TableHead>To Age</TableHead>
+              <TableHead>Unit</TableHead>
+            </>
+          )}
           {showDepartment && <TableHead>Department</TableHead>}
           {showAgeGroup && <TableHead>Age Group</TableHead>}
           {showDescription && <TableHead>Description</TableHead>}
+          {showStatus && <TableHead>Status</TableHead>}
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
@@ -49,9 +65,19 @@ export function MasterTable({
         {items.map((item) => (
           <TableRow key={item.id}>
             <TableCell className="font-medium">{item.name}</TableCell>
+            {showAgeRange && (
+              <>
+                <TableCell>{item.fromAge ?? "-"}</TableCell>
+                <TableCell>{item.toAge ?? "-"}</TableCell>
+                <TableCell>{item.unit ?? "-"}</TableCell>
+              </>
+            )}
             {showDepartment && <TableCell>{item.departmentName || "-"}</TableCell>}
             {showAgeGroup && <TableCell>{item.ageGroupName || "-"}</TableCell>}
             {showDescription && <TableCell>{item.description || "-"}</TableCell>}
+            {showStatus && (
+              <TableCell>{item.status === undefined ? "-" : item.status ? "Active" : "Inactive"}</TableCell>
+            )}
             <TableCell className="text-right space-x-2">
               <Button size="icon" variant="outline" onClick={() => canEdit && onEdit(item.id)} aria-label="Edit" disabled={!canEdit}>
                 <Edit className="h-4 w-4" />

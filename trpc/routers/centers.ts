@@ -118,6 +118,31 @@ const updateCenterSchema = z.object({
   approvalNote: z.string().trim().min(1).optional(),
 })
 
+const updateCenterSettingsSchema = z.object({
+  id: z.string().uuid(),
+  centerName: z.string().trim().optional().nullable(),
+  commercialRegistrationNumber: z.string().trim().optional().nullable(),
+  shortDescription: z.string().trim().optional().nullable(),
+  location: z.string().trim().optional().nullable(),
+  website: z.string().trim().optional().nullable(),
+  officialEmail: z.string().trim().optional().nullable(),
+  phoneNumber: z.string().trim().optional().nullable(),
+  address: z.string().trim().optional().nullable(),
+  languageSupported: z.string().trim().optional().nullable(),
+  therapistCount: z.number().int().min(0).optional().nullable(),
+  centerContactNumber: z.string().trim().optional().nullable(),
+  managerName: z.string().trim().optional().nullable(),
+  managerEmail: z.string().trim().optional().nullable(),
+  managerPhone: z.string().trim().optional().nullable(),
+  managerPrimary: z.boolean().optional().nullable(),
+  marketingRepName: z.string().trim().optional().nullable(),
+  marketingRepEmail: z.string().trim().optional().nullable(),
+  marketingRepPhone: z.string().trim().optional().nullable(),
+  marketingRepPrimary: z.boolean().optional().nullable(),
+  logoUrl: z.string().trim().optional().nullable(),
+  primaryAccentColor: z.string().trim().optional().nullable(),
+})
+
 export const centersRouter = createTRPCRouter({
   list: publicProcedure.input(listCentersSchema.optional()).query(async ({ input }) => {
     try {
@@ -159,6 +184,7 @@ export const centersRouter = createTRPCRouter({
       }
 
       const authUserId = center[0].authUserId
+      const centerUserId = center[0].userId
 
       type CenterSettingsRow = {
         center_name: string | null
@@ -234,7 +260,29 @@ export const centersRouter = createTRPCRouter({
         certificates: SpecialistAttachment[] | null
       }
 
-      const [settingsRows, departmentRows, serviceRows, specialistRows, educationRows, experienceRows] = await Promise.all([
+      type ClientReferralRequestRow = {
+        id: string
+        customer_name: string | null
+        customer_email: string | null
+        customer_phone: string | null
+        note: string | null
+        status: "pending" | "approved" | "rejected"
+        referral_code: string | null
+        rejection_note: string | null
+        decided_at: string | null
+        created_at: string
+        updated_at: string
+      }
+
+      const [
+        settingsRows,
+        departmentRows,
+        serviceRows,
+        specialistRows,
+        educationRows,
+        experienceRows,
+        referralRequestRows,
+      ] = await Promise.all([
         client<CenterSettingsRow[]>`
         select
           center_name,
@@ -319,6 +367,25 @@ export const centersRouter = createTRPCRouter({
         where s.created_by = ${authUserId}
         order by x.from_date desc
       `,
+      centerUserId
+        ? client<ClientReferralRequestRow[]>`
+        select
+          id,
+          customer_name,
+          customer_email,
+          customer_phone,
+          note,
+          status,
+          referral_code,
+          rejection_note,
+          decided_at,
+          created_at,
+          updated_at
+        from client_referral_requests
+        where center_user_id = ${centerUserId}
+        order by created_at desc
+      `
+        : Promise.resolve([] as ClientReferralRequestRow[]),
       ])
 
       const settings = settingsRows[0] ?? null
@@ -401,7 +468,21 @@ export const centersRouter = createTRPCRouter({
         })),
       }
 
-      return { data: { ...center[0], onboarding } }
+      const clientRequests = referralRequestRows.map((request) => ({
+        id: request.id,
+        customerName: request.customer_name,
+        customerEmail: request.customer_email,
+        customerPhone: request.customer_phone,
+        note: request.note,
+        status: request.status,
+        referralCode: request.referral_code,
+        rejectionNote: request.rejection_note,
+        decidedAt: request.decided_at,
+        createdAt: request.created_at,
+        updatedAt: request.updated_at,
+      }))
+
+      return { data: { ...center[0], onboarding, clientRequests } }
     } catch (error) {
       if (error instanceof TRPCError) throw error
       console.error("centers.byId query failed", error)
@@ -572,6 +653,223 @@ export const centersRouter = createTRPCRouter({
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
         message: `Failed to update center. ${formatDatabaseError(error)}`,
+      })
+    }
+  }),
+
+  updateSettings: publicProcedure.input(updateCenterSettingsSchema).mutation(async ({ input }) => {
+    try {
+      const center = await db.select().from(centerProfiles).where(eq(centerProfiles.id, input.id)).limit(1)
+      if (center.length === 0) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Center not found" })
+      }
+
+      const authUserId = center[0].authUserId
+
+      const normalizeText = (value: string | null | undefined) => {
+        if (value === null) return null
+        if (value === undefined) return undefined
+        const trimmed = value.trim()
+        return trimmed.length ? trimmed : null
+      }
+
+      const centerName = normalizeText(input.centerName)
+      const commercialRegistrationNumber = normalizeText(input.commercialRegistrationNumber)
+      const shortDescription = normalizeText(input.shortDescription)
+      const location = normalizeText(input.location)
+      const website = normalizeText(input.website)
+      const officialEmail = normalizeText(input.officialEmail)
+      const phoneNumber = normalizeText(input.phoneNumber)
+      const address = normalizeText(input.address)
+      const languageSupported = normalizeText(input.languageSupported)
+      const centerContactNumber = normalizeText(input.centerContactNumber)
+      const managerName = normalizeText(input.managerName)
+      const managerEmail = normalizeText(input.managerEmail)
+      const managerPhone = normalizeText(input.managerPhone)
+      const marketingRepName = normalizeText(input.marketingRepName)
+      const marketingRepEmail = normalizeText(input.marketingRepEmail)
+      const marketingRepPhone = normalizeText(input.marketingRepPhone)
+      const logoUrl = normalizeText(input.logoUrl)
+      const primaryAccentColor = normalizeText(input.primaryAccentColor)
+
+      const therapistCount = input.therapistCount === undefined ? undefined : input.therapistCount ?? null
+      const managerPrimary = input.managerPrimary === undefined ? undefined : input.managerPrimary ?? null
+      const marketingRepPrimary = input.marketingRepPrimary === undefined ? undefined : input.marketingRepPrimary ?? null
+
+      const existingRows = await client<
+        Array<{
+          center_name: string | null
+          commercial_registration_number: string | null
+          short_description: string | null
+          location: string | null
+          website: string | null
+          official_email: string | null
+          phone_number: string | null
+          address: string | null
+          language_supported: string | null
+          therapist_count: number | null
+          center_contact_number: string | null
+          manager_name: string | null
+          manager_email: string | null
+          manager_phone: string | null
+          manager_primary: boolean | null
+          marketing_rep_name: string | null
+          marketing_rep_email: string | null
+          marketing_rep_phone: string | null
+          marketing_rep_primary: boolean | null
+          logo_url: string | null
+          primary_accent_color: string | null
+        }>
+      >`
+        select
+          center_name,
+          commercial_registration_number,
+          short_description,
+          location,
+          website,
+          official_email,
+          phone_number,
+          address,
+          language_supported,
+          therapist_count,
+          center_contact_number,
+          manager_name,
+          manager_email,
+          manager_phone,
+          manager_primary,
+          marketing_rep_name,
+          marketing_rep_email,
+          marketing_rep_phone,
+          marketing_rep_primary,
+          logo_url,
+          primary_accent_color
+        from center_settings
+        where auth_user_id = ${authUserId}
+        limit 1
+      `
+
+      const existing = existingRows[0] ?? null
+
+      const patch = {
+        center_name: centerName === undefined ? existing?.center_name ?? null : centerName,
+        commercial_registration_number:
+          commercialRegistrationNumber === undefined
+            ? existing?.commercial_registration_number ?? null
+            : commercialRegistrationNumber,
+        short_description: shortDescription === undefined ? existing?.short_description ?? null : shortDescription,
+        location: location === undefined ? existing?.location ?? null : location,
+        website: website === undefined ? existing?.website ?? null : website,
+        official_email: officialEmail === undefined ? existing?.official_email ?? null : officialEmail,
+        phone_number: phoneNumber === undefined ? existing?.phone_number ?? null : phoneNumber,
+        address: address === undefined ? existing?.address ?? null : address,
+        language_supported: languageSupported === undefined ? existing?.language_supported ?? null : languageSupported,
+        therapist_count:
+          therapistCount === undefined ? existing?.therapist_count ?? 0 : therapistCount ?? existing?.therapist_count ?? 0,
+        center_contact_number:
+          centerContactNumber === undefined ? existing?.center_contact_number ?? null : centerContactNumber,
+        manager_name: managerName === undefined ? existing?.manager_name ?? null : managerName,
+        manager_email: managerEmail === undefined ? existing?.manager_email ?? null : managerEmail,
+        manager_phone: managerPhone === undefined ? existing?.manager_phone ?? null : managerPhone,
+        manager_primary:
+          managerPrimary === undefined ? existing?.manager_primary ?? true : managerPrimary ?? existing?.manager_primary ?? true,
+        marketing_rep_name: marketingRepName === undefined ? existing?.marketing_rep_name ?? null : marketingRepName,
+        marketing_rep_email: marketingRepEmail === undefined ? existing?.marketing_rep_email ?? null : marketingRepEmail,
+        marketing_rep_phone: marketingRepPhone === undefined ? existing?.marketing_rep_phone ?? null : marketingRepPhone,
+        marketing_rep_primary:
+          marketingRepPrimary === undefined
+            ? existing?.marketing_rep_primary ?? false
+            : marketingRepPrimary ?? existing?.marketing_rep_primary ?? false,
+        logo_url: logoUrl === undefined ? existing?.logo_url ?? null : logoUrl,
+        primary_accent_color:
+          primaryAccentColor === undefined ? existing?.primary_accent_color ?? "#ABBA30" : primaryAccentColor ?? "#ABBA30",
+      }
+
+      await client`
+        insert into center_settings (
+          auth_user_id,
+          center_name,
+          commercial_registration_number,
+          short_description,
+          location,
+          website,
+          official_email,
+          phone_number,
+          address,
+          language_supported,
+          therapist_count,
+          center_contact_number,
+          manager_name,
+          manager_email,
+          manager_phone,
+          manager_primary,
+          marketing_rep_name,
+          marketing_rep_email,
+          marketing_rep_phone,
+          marketing_rep_primary,
+          logo_url,
+          primary_accent_color,
+          updated_at
+        ) values (
+          ${authUserId},
+          ${patch.center_name},
+          ${patch.commercial_registration_number},
+          ${patch.short_description},
+          ${patch.location},
+          ${patch.website},
+          ${patch.official_email},
+          ${patch.phone_number},
+          ${patch.address},
+          ${patch.language_supported},
+          ${patch.therapist_count},
+          ${patch.center_contact_number},
+          ${patch.manager_name},
+          ${patch.manager_email},
+          ${patch.manager_phone},
+          ${patch.manager_primary},
+          ${patch.marketing_rep_name},
+          ${patch.marketing_rep_email},
+          ${patch.marketing_rep_phone},
+          ${patch.marketing_rep_primary},
+          ${patch.logo_url},
+          ${patch.primary_accent_color},
+          now()
+        )
+        on conflict (auth_user_id) do update set
+          center_name = excluded.center_name,
+          commercial_registration_number = excluded.commercial_registration_number,
+          short_description = excluded.short_description,
+          location = excluded.location,
+          website = excluded.website,
+          official_email = excluded.official_email,
+          phone_number = excluded.phone_number,
+          address = excluded.address,
+          language_supported = excluded.language_supported,
+          therapist_count = excluded.therapist_count,
+          center_contact_number = excluded.center_contact_number,
+          manager_name = excluded.manager_name,
+          manager_email = excluded.manager_email,
+          manager_phone = excluded.manager_phone,
+          manager_primary = excluded.manager_primary,
+          marketing_rep_name = excluded.marketing_rep_name,
+          marketing_rep_email = excluded.marketing_rep_email,
+          marketing_rep_phone = excluded.marketing_rep_phone,
+          marketing_rep_primary = excluded.marketing_rep_primary,
+          logo_url = excluded.logo_url,
+          primary_accent_color = excluded.primary_accent_color,
+          updated_at = now()
+      `
+
+      if (centerName && centerName !== center[0].centerName) {
+        await db.update(centerProfiles).set({ centerName }).where(eq(centerProfiles.id, input.id))
+      }
+
+      return { success: true }
+    } catch (error) {
+      if (error instanceof TRPCError) throw error
+      console.error("centers.updateSettings mutation failed", error)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: `Failed to update center settings. ${formatDatabaseError(error)}`,
       })
     }
   }),

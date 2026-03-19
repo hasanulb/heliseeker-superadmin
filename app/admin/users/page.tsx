@@ -3,7 +3,7 @@
 import { useState } from "react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import { SearchInput } from "@/components/ui/search-input"
 import { Switch } from "@/components/ui/switch"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useToggleUserActive, useUsers } from "./_hooks/use-users"
@@ -33,7 +33,7 @@ export default function UsersPage() {
           <CardTitle>Customer List</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Input
+          <SearchInput
             placeholder="Search user by name or email"
             value={query}
             onChange={(event) => setQuery(event.target.value)}

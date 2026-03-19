@@ -20,6 +20,9 @@ export function FilterList({ items, onToggle, onReorder }: FilterListProps) {
         <TableRow>
           <TableHead>Kind</TableHead>
           <TableHead>Name</TableHead>
+          <TableHead>From Age</TableHead>
+          <TableHead>To Age</TableHead>
+          <TableHead>Unit</TableHead>
           <TableHead>Description</TableHead>
           <TableHead>Parent</TableHead>
           <TableHead>Status</TableHead>
@@ -31,6 +34,9 @@ export function FilterList({ items, onToggle, onReorder }: FilterListProps) {
           <TableRow key={item.id}>
             <TableCell>{item.kind}</TableCell>
             <TableCell className="font-medium">{item.name}</TableCell>
+            <TableCell>{item.kind === "ageRange" && item.fromAge !== undefined ? item.fromAge : "-"}</TableCell>
+            <TableCell>{item.kind === "ageRange" && item.toAge !== undefined ? item.toAge : "-"}</TableCell>
+            <TableCell>{item.kind === "ageRange" && item.unit ? item.unit : "-"}</TableCell>
             <TableCell>{item.description || "-"}</TableCell>
             <TableCell>{item.parentId || "-"}</TableCell>
             <TableCell>

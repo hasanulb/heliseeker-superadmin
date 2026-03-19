@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 
 import { makeId, readDb, updateDb } from "@/lib/admin-panel/store"
-import { FilterKind, SearchFilterItem } from "@/lib/admin-panel/types"
+import { AgeUnit, FilterKind, SearchFilterItem } from "@/lib/admin-panel/types"
 
 export async function GET() {
   const db = await readDb()
@@ -14,6 +14,10 @@ export async function POST(request: NextRequest) {
     name: string
     description?: string
     parentId?: string
+    enabled?: boolean
+    fromAge?: number
+    toAge?: number
+    unit?: AgeUnit
   }
 
   const item: SearchFilterItem = {
@@ -22,8 +26,11 @@ export async function POST(request: NextRequest) {
     name: payload.name,
     description: payload.description,
     parentId: payload.parentId,
-    enabled: true,
+    enabled: payload.enabled ?? true,
     order: Date.now(),
+    ...(payload.kind === "ageRange"
+      ? { fromAge: payload.fromAge, toAge: payload.toAge, unit: payload.unit }
+      : {}),
   }
 
   await updateDb((current) => ({
@@ -40,6 +47,10 @@ export async function PATCH(request: NextRequest) {
     enabled?: boolean
     name?: string
     description?: string
+    parentId?: string
+    fromAge?: number
+    toAge?: number
+    unit?: AgeUnit
   }
 
   const next = await updateDb((current) => ({
@@ -51,6 +62,10 @@ export async function PATCH(request: NextRequest) {
             enabled: payload.enabled ?? item.enabled,
             name: payload.name ?? item.name,
             description: payload.description ?? item.description,
+            parentId: payload.parentId ?? item.parentId,
+            fromAge: payload.fromAge ?? item.fromAge,
+            toAge: payload.toAge ?? item.toAge,
+            unit: payload.unit ?? item.unit,
           }
         : item,
     ),

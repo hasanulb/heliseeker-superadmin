@@ -21,7 +21,7 @@ interface CentersTableProps {
   updatingStatus?: CenterApprovalStatus | null
 }
 
-const statuses: CenterApprovalStatus[] = ["submitted", "active", "deactive", "rejected", "blacklisted", "pending"]
+const statuses: CenterApprovalStatus[] = ["submitted", "active", "deactive", "rejected", "blacklisted"]
 const statusStyles: Record<CenterApprovalStatus, string> = {
   submitted: "border-blue-200 text-blue-700 bg-blue-50",
   pending: "border-blue-200 text-blue-700 bg-blue-50",
@@ -29,6 +29,24 @@ const statusStyles: Record<CenterApprovalStatus, string> = {
   deactive: "border-amber-200 text-amber-700 bg-amber-50",
   rejected: "border-red-200 text-red-700 bg-red-50",
   blacklisted: "border-zinc-300 text-zinc-700 bg-zinc-100",
+}
+
+const completedActionsByStatus: Partial<Record<CenterApprovalStatus, CenterApprovalStatus[]>> = {
+  active: ["deactive", "blacklisted"],
+  deactive: ["active"],
+  rejected: ["active"],
+  blacklisted: ["active"],
+}
+
+function getCompletedActionOptions(status: CenterApprovalStatus): CenterApprovalStatus[] {
+  return completedActionsByStatus[status] ?? []
+}
+
+function getActionLabel(status: CenterApprovalStatus) {
+  if (status === "deactive") return "Inactive"
+  if (status === "blacklisted") return "Blacklist"
+  if (status === "active") return "Active"
+  return status
 }
 
 export function CentersTable({
@@ -60,6 +78,7 @@ export function CentersTable({
           const isUpdatingCenter = updatingCenterId === center.id
           const isApproving = isUpdatingCenter && updatingStatus === "active"
           const isRejecting = isUpdatingCenter && updatingStatus === "rejected"
+          const completedActionOptions = showStatusSelect ? getCompletedActionOptions(center.approvalStatus) : []
 
           return (
             <TableRow key={center.id}>
@@ -103,19 +122,19 @@ export function CentersTable({
                       </Button>
                     </>
                   )}
-                  {showStatusSelect && (
+                  {showStatusSelect && completedActionOptions.length > 0 && (
                     <Select
-                      value={center.approvalStatus}
+                      key={`${center.id}:${center.approvalStatus}`}
                       onValueChange={(value) => onUpdateStatus(center.id, value as CenterApprovalStatus)}
                       disabled={isUpdatingCenter}
                     >
-                      <SelectTrigger className="inline-flex w-[140px] uppercase">
-                        <SelectValue placeholder="Change status" className="uppercase" />
+                      <SelectTrigger className="inline-flex w-[140px]">
+                        <SelectValue placeholder="User action" />
                       </SelectTrigger>
                       <SelectContent>
-                        {statuses.map((status) => (
+                        {completedActionOptions.map((status) => (
                           <SelectItem key={status} value={status} className="uppercase">
-                            {status}
+                            {getActionLabel(status)}
                           </SelectItem>
                         ))}
                       </SelectContent>

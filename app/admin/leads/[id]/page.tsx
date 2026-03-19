@@ -30,14 +30,14 @@ export default function LeadDetailPage() {
   }
 
   if (!access.can("leads", "view")) {
-    return <ContentNotFound message="You do not have access to view leads." />
+    return <ContentNotFound message="You do not have access to view enquiries." />
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Lead Details</h1>
+          <h1 className="text-2xl font-semibold">Enquiry Details</h1>
           <p className="text-sm text-muted-foreground">Full message and contact info.</p>
         </div>
         <BackButton />
@@ -46,9 +46,9 @@ export default function LeadDetailPage() {
       {leadQuery.isLoading ? (
         <ContentLoading />
       ) : leadQuery.isError ? (
-        <ContentNotFound message={leadQuery.error?.message || "Failed to load lead."} />
+        <ContentNotFound message={leadQuery.error?.message || "Failed to load enquiry."} />
       ) : !lead ? (
-        <ContentNotFound message="Lead not found." />
+        <ContentNotFound message="Enquiry not found." />
       ) : (
         <Card>
           <CardHeader>
@@ -68,14 +68,6 @@ export default function LeadDetailPage() {
             <div className="space-y-1 md:col-span-2">
               <p className="text-xs text-muted-foreground">Message</p>
               <p className="whitespace-pre-wrap">{lead.message || "—"}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Source</p>
-              <p className="font-medium">{lead.source || "—"}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Page URL</p>
-              <p className="font-medium break-all">{lead.pageUrl || "—"}</p>
             </div>
             <div className="space-y-1">
               <p className="text-xs text-muted-foreground">Created</p>

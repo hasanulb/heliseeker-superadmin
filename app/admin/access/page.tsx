@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { SearchInput } from "@/components/ui/search-input"
 
 import { RolesTable } from "./_components/roles-table"
 import { useCreateRole, useDeleteRole, useRoles, useUpdateRole } from "./_hooks/use-roles"
@@ -18,7 +19,7 @@ import { Role } from "@/lib/admin-panel/types"
 
 const MODULES = [
   { key: "centers", label: "Centers" },
-  { key: "leads", label: "Leads" },
+  { key: "leads", label: "Enquiries" },
   { key: "department", label: "Department" },
   { key: "service", label: "Service" },
   { key: "specialization", label: "Specialization" },
@@ -47,6 +48,7 @@ export default function AccessManagementPage() {
           view: current?.view ?? false,
           create: current?.create ?? false,
           edit: current?.edit ?? false,
+          delete: current?.delete ?? false,
         }
       }),
     [],
@@ -100,7 +102,7 @@ export default function AccessManagementPage() {
               className="space-y-4"
               onSubmit={form.handleSubmit(async (values) => {
                 const permissions = values.permissions.filter(
-                  (permission) => permission.view || permission.create || permission.edit,
+                  (permission) => permission.view || permission.create || permission.edit || permission.delete,
                 )
                 if (editingRole) {
                   await updateMutation.mutateAsync({
@@ -123,12 +125,16 @@ export default function AccessManagementPage() {
                   control={form.control}
                   name="name"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Role Name</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
+                    <FormItem className="grid gap-2 md:grid-cols-[180px_1fr] md:items-center">
+                      <FormLabel className="md:mb-0">
+                        Role Name <span className="text-destructive">*</span>
+                      </FormLabel>
+                      <div>
+                        <FormControl>
+                          <Input placeholder="Enter Role Name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </div>
                     </FormItem>
                   )}
                 />
@@ -140,47 +146,64 @@ export default function AccessManagementPage() {
                 render={({ field, fieldState }) => (
                   <FormItem>
                     <FormLabel>Module Permissions</FormLabel>
-                    <div className="grid gap-2 rounded-md border p-3">
-                      <div className="grid grid-cols-[1fr_repeat(3,_80px)] items-center text-xs font-semibold text-muted-foreground">
-                        <span>Module</span>
-                        <span className="text-center">View</span>
-                        <span className="text-center">Create</span>
-                        <span className="text-center">Edit</span>
-                      </div>
+                    <div className="rounded-md border">
                       {MODULES.map((module, index) => {
                         const current = field.value[index]
+                        const view = current?.view || false
+                        const create = current?.create || false
+                        const edit = current?.edit || false
+                        const del = current?.delete || false
+                        const any = view || create || edit || del
+                        const all = view && create && edit && del
+
+                        const setRow = (patch: Partial<(typeof field.value)[number]>) => {
+                          const next = [...field.value]
+                          next[index] = { ...current, module: module.key, view, create, edit, delete: del, ...patch }
+                          field.onChange(next)
+                        }
+
+                        const toggleAll = (checked: boolean) => {
+                          setRow({ view: checked, create: checked, edit: checked, delete: checked })
+                        }
+
                         return (
-                          <div key={module.key} className="grid grid-cols-[1fr_repeat(3,_80px)] items-center gap-2 py-1">
-                            <span className="text-sm">{module.label}</span>
-                            <div className="flex justify-center">
-                              <Checkbox
-                                checked={current?.view || false}
-                                onCheckedChange={(checked) => {
-                                  const next = [...field.value]
-                                  next[index] = { ...current, module: module.key, view: Boolean(checked) }
-                                  field.onChange(next)
-                                }}
-                              />
+                          <div key={module.key} className="border-b last:border-b-0">
+                            {/* Section header (matches attached design) */}
+                            <div className="grid grid-cols-[260px_repeat(4,_minmax(72px,1fr))] items-center bg-muted/50 px-4 py-3 text-muted-foreground">
+                              <div className="flex items-center gap-3">
+                                <Checkbox
+                                  checked={all ? true : any ? "indeterminate" : false}
+                                  onCheckedChange={(checked) => toggleAll(Boolean(checked))}
+                                />
+                                <span className="font-medium text-foreground">{module.label}</span>
+                              </div>
+                              <div className="text-center text-xs font-semibold uppercase tracking-wide">View</div>
+                              <div className="text-center text-xs font-semibold uppercase tracking-wide">Add</div>
+                              <div className="text-center text-xs font-semibold uppercase tracking-wide">Edit</div>
+                              <div className="text-center text-xs font-semibold uppercase tracking-wide">Delete</div>
                             </div>
-                            <div className="flex justify-center">
-                              <Checkbox
-                                checked={current?.create || false}
-                                onCheckedChange={(checked) => {
-                                  const next = [...field.value]
-                                  next[index] = { ...current, module: module.key, create: Boolean(checked) }
-                                  field.onChange(next)
-                                }}
-                              />
-                            </div>
-                            <div className="flex justify-center">
-                              <Checkbox
-                                checked={current?.edit || false}
-                                onCheckedChange={(checked) => {
-                                  const next = [...field.value]
-                                  next[index] = { ...current, module: module.key, edit: Boolean(checked) }
-                                  field.onChange(next)
-                                }}
-                              />
+
+                            {/* Permission row */}
+                            <div className="grid grid-cols-[260px_repeat(4,_minmax(72px,1fr))] items-center px-4 py-4">
+                              <div className="flex items-center gap-3 text-sm">
+                                <Checkbox
+                                  checked={all ? true : any ? "indeterminate" : false}
+                                  onCheckedChange={(checked) => toggleAll(Boolean(checked))}
+                                />
+                                <span>{module.label}</span>
+                              </div>
+                              <div className="flex justify-center">
+                                <Checkbox checked={view} onCheckedChange={(checked) => setRow({ view: Boolean(checked) })} />
+                              </div>
+                              <div className="flex justify-center">
+                                <Checkbox checked={create} onCheckedChange={(checked) => setRow({ create: Boolean(checked) })} />
+                              </div>
+                              <div className="flex justify-center">
+                                <Checkbox checked={edit} onCheckedChange={(checked) => setRow({ edit: Boolean(checked) })} />
+                              </div>
+                              <div className="flex justify-center">
+                                <Checkbox checked={del} onCheckedChange={(checked) => setRow({ delete: Boolean(checked) })} />
+                              </div>
                             </div>
                           </div>
                         )
@@ -221,7 +244,7 @@ export default function AccessManagementPage() {
         </CardHeader>
         <CardContent>
           <div className="mb-4">
-            <Input
+            <SearchInput
               placeholder="Search roles by name or module"
               value={search}
               onChange={(event) => setSearch(event.target.value)}

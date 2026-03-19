@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import { SearchInput } from "@/components/ui/search-input"
 import { useToast } from "@/hooks/use-toast"
 
 import { CentersTable } from "./_components/centers-table"
@@ -21,10 +21,10 @@ export default function CentersPage() {
   const filtersForm = useForm({ defaultValues: { q: "" } })
   const filters = filtersForm.watch()
   const { data, isLoading, error } = useCenters(filters)
-  const centers = data?.data ?? []
+  const centers = (data?.data ?? []).filter((center) => center.approvalStatus !== "pending")
   const pendingCenters = centers.filter((center) => center.approvalStatus === "submitted")
   const completedCenters = centers.filter(
-    (center) => center.approvalStatus !== "submitted",
+    (center) => center.approvalStatus !== "submitted" && center.approvalStatus !== "pending",
   )
   const visibleCenters = statusFilter === "pending" ? pendingCenters : completedCenters
 
@@ -91,7 +91,7 @@ export default function CentersPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-3 md:grid-cols-1">
-            <Input
+            <SearchInput
               placeholder="Search name/email/phone"
               value={filters.q}
               onChange={(e) => filtersForm.setValue("q", e.target.value)}

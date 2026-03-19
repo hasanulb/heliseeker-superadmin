@@ -10,6 +10,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { SearchInput } from "@/components/ui/search-input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command"
 import { cn } from "@/lib/utils"
@@ -50,6 +53,10 @@ const masterItemSchema = z.object({
   description: z.string().optional(),
   departmentId: z.string().optional(),
   ageGroupId: z.string().optional(),
+  fromAge: z.number().int().min(0).optional(),
+  toAge: z.number().int().min(0).optional(),
+  unit: z.enum(["month", "year"]).optional(),
+  status: z.boolean().optional(),
 })
 
 type MasterFormValues = z.infer<typeof masterItemSchema>
@@ -140,7 +147,7 @@ export default function MasterPage({ params }: { params: Promise<{ slug: string 
 
   const form = useForm<MasterFormValues>({
     resolver: zodResolver(masterItemSchema),
-    defaultValues: { name: "", description: "", departmentId: "", ageGroupId: "none" },
+    defaultValues: { name: "", description: "", departmentId: "", ageGroupId: "none", fromAge: undefined, toAge: undefined, unit: "year", status: true },
   })
 
   const moduleKey =
@@ -174,7 +181,7 @@ export default function MasterPage({ params }: { params: Promise<{ slug: string 
 
   useEffect(() => {
     if (!editingId) {
-      form.reset({ name: "", description: "", departmentId: "", ageGroupId: "none" })
+      form.reset({ name: "", description: "", departmentId: "", ageGroupId: "none", fromAge: undefined, toAge: undefined, unit: "year", status: true })
       return
     }
 
@@ -185,6 +192,10 @@ export default function MasterPage({ params }: { params: Promise<{ slug: string 
       description: current.description ?? "",
       departmentId: current.department_id ?? "",
       ageGroupId: current.age_group_id ?? "none",
+      fromAge: typeof current.from_age === "number" ? current.from_age : current.from_age ? Number(current.from_age) : undefined,
+      toAge: typeof current.to_age === "number" ? current.to_age : current.to_age ? Number(current.to_age) : undefined,
+      unit: current.unit === "month" || current.unit === "year" ? current.unit : "year",
+      status: typeof current.status === "boolean" ? current.status : current.status === null || current.status === undefined ? true : Boolean(current.status),
     })
   }, [editingId, form, data?.data])
 
@@ -201,6 +212,10 @@ export default function MasterPage({ params }: { params: Promise<{ slug: string 
       description: item.description ?? "",
       departmentName: item.department_id ? departmentMap.get(item.department_id) : undefined,
       ageGroupName: item.age_group_id ? ageGroupMap.get(item.age_group_id) : undefined,
+      fromAge: item.from_age ?? undefined,
+      toAge: item.to_age ?? undefined,
+      unit: item.unit ?? undefined,
+      status: item.status ?? undefined,
     }))
   }, [data?.data, departmentQuery.data?.data, ageGroupQuery.data?.data])
 
@@ -248,6 +263,26 @@ export default function MasterPage({ params }: { params: Promise<{ slug: string 
                   form.setError("departmentId", { message: "Department is required." })
                   return
                 }
+
+                if (slug === "age-groups") {
+                  if (values.fromAge === undefined) {
+                    form.setError("fromAge", { message: "From age is required." })
+                    return
+                  }
+                  if (values.toAge === undefined) {
+                    form.setError("toAge", { message: "To age is required." })
+                    return
+                  }
+                  if (values.unit === undefined) {
+                    form.setError("unit", { message: "Unit is required." })
+                    return
+                  }
+                  if (values.toAge < values.fromAge) {
+                    form.setError("toAge", { message: "To age must be >= from age." })
+                    return
+                  }
+                }
+
                 const payload =
                   slug === "services"
                     ? {
@@ -255,6 +290,15 @@ export default function MasterPage({ params }: { params: Promise<{ slug: string 
                         description: values.description || undefined,
                         department_id: values.departmentId || undefined,
                         age_group_id: values.ageGroupId === "none" ? undefined : values.ageGroupId,
+                      }
+                    : slug === "age-groups"
+                    ? {
+                        name: values.name,
+                        description: values.description || undefined,
+                        from_age: values.fromAge,
+                        to_age: values.toAge,
+                        unit: values.unit,
+                        status: values.status ?? true,
                       }
                     : {
                         name: values.name,
@@ -278,7 +322,7 @@ export default function MasterPage({ params }: { params: Promise<{ slug: string 
                       variant: "success",
                     })
                   }
-                  form.reset({ name: "", description: "", departmentId: "", ageGroupId: "none" })
+                  form.reset({ name: "", description: "", departmentId: "", ageGroupId: "none", fromAge: undefined, toAge: undefined, unit: "year", status: true })
                 } catch (err: any) {
                   if (handleAuthError(err)) return
                   toast({
@@ -302,6 +346,111 @@ export default function MasterPage({ params }: { params: Promise<{ slug: string 
                   </FormItem>
                 )}
               />
+
+              {slug === "age-groups" && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="fromAge"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>From Age</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            inputMode="numeric"
+                            value={field.value ?? ""}
+                            onChange={(e) => {
+                              if (e.target.value === "") return field.onChange(undefined)
+                              const n = Number(e.target.value)
+                              field.onChange(Number.isNaN(n) ? undefined : n)
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="toAge"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>To Age</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            inputMode="numeric"
+                            value={field.value ?? ""}
+                            onChange={(e) => {
+                              if (e.target.value === "") return field.onChange(undefined)
+                              const n = Number(e.target.value)
+                              field.onChange(Number.isNaN(n) ? undefined : n)
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="unit"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Unit</FormLabel>
+                        <Select defaultValue={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select unit" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="month">Month</SelectItem>
+                            <SelectItem value="year">Year</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-2">
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="status"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-md border px-3 py-2 md:col-span-2">
+                        <div>
+                          <FormLabel>Status</FormLabel>
+                          <p className="text-xs text-muted-foreground">Toggle to activate/deactivate this age group.</p>
+                        </div>
+                        <FormControl>
+                          <div className="flex items-center gap-2">
+                            <Switch checked={field.value ?? true} onCheckedChange={field.onChange} />
+                            <span className="text-sm">{(field.value ?? true) ? "Active" : "Inactive"}</span>
+                          </div>
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </>
+              )}
 
               {slug === "services" && (
                 <FormField
@@ -330,7 +479,7 @@ export default function MasterPage({ params }: { params: Promise<{ slug: string 
                 />
               )}
 
-              {slug !== "specializations" && (
+              {slug !== "specializations" && slug !== "age-groups" && (
                 <FormField
                   control={form.control}
                   name="description"
@@ -399,7 +548,7 @@ export default function MasterPage({ params }: { params: Promise<{ slug: string 
         </CardHeader>
         <CardContent>
           <div className="mb-4">
-            <Input
+            <SearchInput
               placeholder={`Search ${config.title.toLowerCase()}`}
               value={tableQuery}
               onChange={(event) => setTableQuery(event.target.value)}
@@ -437,6 +586,8 @@ export default function MasterPage({ params }: { params: Promise<{ slug: string 
               canDelete={access.can(moduleKey, "edit")}
               showDepartment={slug === "services"}
               showAgeGroup={slug === "services"}
+              showAgeRange={slug === "age-groups"}
+              showStatus={slug === "age-groups"}
               showDescription={slug !== "specializations"}
               nameLabel={config.nameLabel}
             />

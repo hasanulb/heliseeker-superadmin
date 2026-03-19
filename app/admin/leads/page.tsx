@@ -3,7 +3,7 @@
 import { useForm } from "react-hook-form"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import { SearchInput } from "@/components/ui/search-input"
 import { ContentLoading, ContentNotFound } from "@/components/common"
 import { useRequirePermission } from "@/app/admin/access/_hooks/use-access"
 
@@ -24,23 +24,23 @@ export default function LeadsPage() {
   }
 
   if (!access.can("leads", "view")) {
-    return <ContentNotFound message="You do not have access to view leads." />
+    return <ContentNotFound message="You do not have access to view enquiries." />
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Leads</h1>
+        <h1 className="text-2xl font-semibold">Enquiries</h1>
         <p className="text-sm text-muted-foreground">Website contact form submissions.</p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>All Leads</CardTitle>
+          <CardTitle>All Enquiries</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-3 md:grid-cols-1">
-            <Input
+            <SearchInput
               placeholder="Search name/email/phone/message"
               value={filters.q}
               onChange={(e) => filtersForm.setValue("q", e.target.value)}
@@ -50,9 +50,9 @@ export default function LeadsPage() {
           {leadsQuery.isLoading ? (
             <ContentLoading />
           ) : leadsQuery.isError ? (
-            <ContentNotFound message={leadsQuery.error?.message || "Failed to load leads."} />
+            <ContentNotFound message={leadsQuery.error?.message || "Failed to load enquiries."} />
           ) : leads.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No leads found.</p>
+            <p className="text-sm text-muted-foreground">No enquiries found.</p>
           ) : (
             <LeadsTable leads={leads} />
           )}
